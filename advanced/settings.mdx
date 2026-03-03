@@ -1,0 +1,342 @@
+---
+title: 'Settings'
+description: 'Configure Zequel to match your preferences'
+icon: 'gear'
+---
+
+Zequel provides comprehensive settings to customize your database management experience. Access settings at any time by pressing `Cmd/Ctrl+,` or selecting **Settings** from the application menu.
+
+## Application Settings
+
+### Theme
+
+Control the appearance of Zequel.
+
+**Available Options**:
+- **System** (default): Automatically matches your operating system theme
+- **Light**: Always use light mode
+- **Dark**: Always use dark mode
+
+**How to Change**:
+1. Open Settings (`Cmd/Ctrl+,`)
+2. Select your preferred theme
+3. The change applies immediately
+
+You can also change the theme from the menu: **View → Appearance → [System/Light/Dark]**
+
+<Note>
+  When using **System** theme, Zequel automatically switches between light and dark mode based on your OS settings. This happens instantly without restarting the app.
+</Note>
+
+### Sidebar Width
+
+Adjust the width of the left sidebar to show more or less of your database schema.
+
+**Range**: 200px - 500px  
+**Default**: 280px
+
+**How to Adjust**:
+- Drag the sidebar edge to resize
+- Or set a specific value in Settings
+
+## Editor Settings
+
+Customize the SQL code editor powered by Monaco Editor.
+
+### Font Size
+
+**Range**: 10 - 24  
+**Default**: 14
+
+Control the size of code text in the SQL editor.
+
+```sql
+-- Font size 14 (default)
+SELECT * FROM users WHERE active = true;
+
+-- Font size 18 (larger)
+SELECT * FROM users WHERE active = true;
+```
+
+### Tab Size
+
+**Range**: 2 - 8  
+**Default**: 2
+
+Set the number of spaces used for indentation.
+
+```sql
+-- Tab size 2 (default)
+SELECT
+  id,
+  name
+FROM users;
+
+-- Tab size 4
+SELECT
+    id,
+    name
+FROM users;
+```
+
+### Word Wrap
+
+**Type**: Boolean  
+**Default**: `false`
+
+When enabled, long SQL lines wrap to the next line instead of requiring horizontal scrolling.
+
+**Recommended for**:
+- Small screens
+- Long query strings
+- Documentation-heavy SQL
+
+### Minimap
+
+**Type**: Boolean  
+**Default**: `false`
+
+Shows a code overview minimap on the right side of the editor (like in VS Code).
+
+**Useful for**:
+- Long SQL files
+- Quick navigation
+- Code overview
+
+<Tip>
+  The minimap is most useful for queries longer than 50-100 lines. For shorter queries, you can disable it to save screen space.
+</Tip>
+
+### Line Numbers
+
+**Type**: Boolean  
+**Default**: `true`
+
+Display line numbers in the editor gutter.
+
+**Disable if**:
+- You want maximum code space
+- Working on very short queries
+
+## Grid Settings
+
+Customize how data is displayed in table views.
+
+### Page Size
+
+**Range**: 10 - 1000  
+**Default**: 100
+
+Number of rows to load per page when viewing table data.
+
+**Considerations**:
+- **Smaller values (10-50)**: Faster load times, more pagination
+- **Larger values (500-1000)**: Fewer pages, but slower initial load
+- **Default (100)**: Balanced for most use cases
+
+<Warning>
+  Very large page sizes (500+) can impact performance on tables with many columns or complex data types. Start with the default and adjust if needed.
+</Warning>
+
+### Alternate Row Colors
+
+**Type**: Boolean  
+**Default**: `true`
+
+When enabled, alternating rows have different background colors for easier reading.
+
+```
+┌──────┬────────┬───────────┐
+│ ID   │ Name   │ Email     │  ← Light background
+├──────┼────────┼───────────┤
+│ 1    │ Alice  │ a@ex.com  │  ← Darker background
+├──────┼────────┼───────────┤
+│ 2    │ Bob    │ b@ex.com  │  ← Light background
+└──────┴────────┴───────────┘
+```
+
+## Query Settings
+
+Control default behavior for SQL queries.
+
+### Default Limit
+
+**Type**: Number or null  
+**Default**: 1000
+
+Automatically applies a `LIMIT` clause to `SELECT` queries to prevent accidentally loading millions of rows.
+
+**Options**:
+- **Number (e.g., 1000)**: Limit queries to this many rows
+- **null**: No limit applied (use with caution)
+
+**Example**:
+```sql
+-- You type:
+SELECT * FROM large_table;
+
+-- Zequel executes (with default limit 1000):
+SELECT * FROM large_table LIMIT 1000;
+```
+
+<Warning>
+  Setting default limit to `null` can cause performance issues or crashes if you query very large tables. Only disable this if you know what you're doing.
+</Warning>
+
+<Tip>
+  You can override the default limit by explicitly adding your own `LIMIT` clause to any query.
+</Tip>
+
+## Connection-Specific Settings
+
+Some settings are tracked per database connection session.
+
+### Safe Mode
+
+**Type**: Boolean  
+**Default**: `false` (per connection)
+
+Enables read-only mode for the current connection. When active:
+
+- No INSERT, UPDATE, or DELETE operations allowed
+- No schema modifications (DROP, ALTER, CREATE)
+- Table data cannot be edited in the grid
+- Useful for production databases or when you want to prevent accidental changes
+
+**How to Enable**:
+- Click the shield icon in the header bar
+- Or toggle in the connection menu
+
+<Note>
+  Safe Mode is **per-session** and does not persist when you disconnect. You need to re-enable it each time you connect.
+</Note>
+
+### Privacy Mode
+
+**Type**: Boolean  
+**Default**: `false` (per connection)
+
+Blurs sensitive data in the UI to prevent shoulder-surfing or accidental exposure during screen sharing.
+
+When enabled:
+- Table data is blurred
+- Query results are blurred
+- Connection strings are hidden
+- Useful for demos, screenshots, or working in public
+
+**How to Enable**:
+- Click the eye icon in the header bar
+- Or toggle in the connection menu
+
+<Tip>
+  Privacy Mode is perfect for recording tutorials or sharing your screen during meetings when working with sensitive data.
+</Tip>
+
+### Active Database
+
+**Type**: String  
+**Tracked per connection**
+
+Zequel remembers which database you're currently viewing within a connection (for databases that support multiple schemas like PostgreSQL, MySQL).
+
+This is tracked in-memory and resets when you disconnect.
+
+### Active Schema (PostgreSQL only)
+
+**Type**: String  
+**Tracked per connection**
+
+For PostgreSQL connections, tracks the active schema (`public`, `private`, etc.).
+
+## Update Settings
+
+Control how Zequel checks for updates.
+
+### Update Channel
+
+**Available Channels**:
+- **Stable** (default): Production releases only
+- **Beta**: Early access to new features
+
+**How to Change**:
+- Menu: **Help → Update Channel → [Stable/Beta]**
+
+<Note>
+  Beta releases may contain bugs or incomplete features. Only use the Beta channel if you want to help test new functionality.
+</Note>
+
+### Check for Updates
+
+Manually check for updates:
+
+- macOS: **Zequel → Check for Updates...**
+- Windows/Linux: Available in Help menu
+
+<Tip>
+  Zequel automatically checks for updates on startup. You'll be notified when a new version is available.
+</Tip>
+
+## App Data Management
+
+### Reset App Data
+
+Completely reset Zequel to factory defaults.
+
+**This will delete**:
+- All saved connections
+- Query history
+- All settings
+- Recent items
+- Pinned items
+
+**How to Reset**:
+1. **Help → Reset App Data...**
+2. Confirm the warning dialog
+3. Restart the app (recommended)
+
+<Warning>
+  This action **cannot be undone**. Make sure to export any important connections or queries before resetting.
+</Warning>
+
+## Logs
+
+Zequel maintains application logs for troubleshooting.
+
+**Log Location**:
+- **macOS**: `~/Library/Application Support/Zequel/logs/`
+- **Windows**: `%APPDATA%/Zequel/logs/`
+- **Linux**: `~/.config/Zequel/logs/`
+
+**Log Format**:
+- One log file per day
+- Format: `YYYY-MM-DD.log`
+- Contains debug, info, warning, and error messages
+
+<Tip>
+  If you encounter issues, check the logs for error messages. Include relevant log snippets when reporting bugs.
+</Tip>
+
+## Settings Storage
+
+All settings are stored locally on your machine:
+
+**Storage Location**:
+- **Application Settings**: `localStorage` in the renderer process
+- **Connection Data**: SQLite database in user data directory
+- **Credentials**: System keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+
+<Note>
+  Settings are stored per installation. If you use Zequel on multiple machines, you'll need to configure settings separately on each.
+</Note>
+
+## Importing/Exporting Settings
+
+Zequel does not currently support exporting or importing settings. Each installation maintains its own configuration.
+
+If you need to migrate settings:
+1. Note your preferred settings
+2. Manually configure them on the new installation
+
+<Tip>
+  Connection data can be exported using the backup/export feature from the connections manager.
+</Tip>

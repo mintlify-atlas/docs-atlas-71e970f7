@@ -1,0 +1,349 @@
+---
+title: 'Schema Browser'
+description: 'Navigate your database structure with an interactive sidebar tree'
+---
+
+The Schema Browser provides a hierarchical view of your database objects in the left sidebar. Browse tables, views, functions, procedures, and other entities with real-time filtering and context menus.
+
+## Sidebar Overview
+
+The sidebar displays database objects organized by type:
+
+- **Tables**: All tables in the active database/schema
+- **Views**: Materialized and standard views
+- **Functions**: User-defined and built-in functions
+- **Procedures**: Stored procedures
+- **Sequences**: Auto-increment sequences (PostgreSQL, Oracle)
+- **Triggers**: Table and database triggers
+- **Events**: Scheduled events (MySQL)
+- **Extensions**: Installed extensions (PostgreSQL)
+- **Users/Roles**: Database users and roles
+
+## Navigating the Tree
+
+### Expanding and Collapsing
+
+<Steps>
+  <Step title="Expand Category">
+    Click the arrow next to any category (e.g., **Tables**) to expand it.
+  </Step>
+  <Step title="View Items">
+    All items in that category appear as a list beneath it.
+  </Step>
+  <Step title="Collapse">
+    Click the arrow again to collapse the category and hide items.
+  </Step>
+</Steps>
+
+### Schema Selection (PostgreSQL)
+
+For PostgreSQL databases, select the active schema:
+
+<Steps>
+  <Step title="Open Schema Selector">
+    Click the schema dropdown at the top of the sidebar.
+  </Step>
+  <Step title="Choose Schema">
+    Select a schema (e.g., `public`, `auth`, custom schemas).
+  </Step>
+  <Step title="Reload Tree">
+    The sidebar refreshes to show objects from the selected schema.
+  </Step>
+</Steps>
+
+<Note>
+  System schemas like `pg_catalog` and `information_schema` are hidden by default. Enable them in Settings → Show System Schemas.
+</Note>
+
+## Database-Specific Trees
+
+Zequel adapts the sidebar tree to each database type:
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    - Schemas (public, custom)
+    - Tables with schema prefix
+    - Materialized Views
+    - Functions (PL/pgSQL)
+    - Procedures
+    - Sequences
+    - Extensions
+    - Triggers
+    - Users & Roles
+  </Tab>
+  <Tab title="MySQL/MariaDB">
+    - Databases
+    - Tables
+    - Views
+    - Procedures
+    - Functions
+    - Triggers
+    - Events
+    - Users
+  </Tab>
+  <Tab title="SQLite">
+    - Tables
+    - Views
+    - Triggers
+    - Indexes
+  </Tab>
+  <Tab title="MongoDB">
+    - Collections (displayed as tables)
+    - Indexes
+    - Users
+  </Tab>
+  <Tab title="Redis">
+    - Keys grouped by pattern
+    - Database selection (0-15)
+    - Key types (String, Hash, List, Set, etc.)
+  </Tab>
+</Tabs>
+
+## Opening Database Objects
+
+### Tables
+
+Click any table to open it in the Data Grid:
+
+<Steps>
+  <Step title="Click Table Name">
+    Find the table in the sidebar and click it.
+  </Step>
+  <Step title="View Data">
+    A new tab opens showing the table's data in the Data Grid.
+  </Step>
+  <Step title="Switch Views">
+    Use the **Data** and **Structure** tabs in the status bar to toggle between data and schema views.
+  </Step>
+</Steps>
+
+### Views
+
+Open views the same way as tables:
+
+- Click a view name to browse its data
+- For materialized views, refresh them via the context menu
+- View definitions can be edited in the Structure view
+
+### Functions and Procedures
+
+Inspect and edit stored code:
+
+<Steps>
+  <Step title="Click Function/Procedure">
+    Select it from the sidebar.
+  </Step>
+  <Step title="View Definition">
+    A new tab opens showing the function body in a code editor.
+  </Step>
+  <Step title="Edit and Save">
+    Modify the code and click **Save** to update the function.
+  </Step>
+</Steps>
+
+## Context Menus
+
+Right-click any object in the sidebar for quick actions:
+
+### Table Context Menu
+
+- **Open Table**: Open in Data Grid (same as clicking)
+- **View Structure**: Jump to the Structure tab
+- **Rename Table**: Rename the table
+- **Duplicate Table**: Create a copy with a new name
+- **Truncate Table**: Delete all rows (keeps structure)
+- **Drop Table**: Permanently delete the table
+- **Export Table**: Export all rows to CSV/JSON/SQL
+- **Copy Table Name**: Copy name to clipboard
+
+### View Context Menu
+
+- **Open View**: Browse view data
+- **Edit View**: Modify the view definition
+- **Refresh Materialized View**: Rebuild materialized view data (PostgreSQL)
+- **Drop View**: Delete the view
+
+### Function/Procedure Menu
+
+- **Edit**: Open in code editor
+- **Drop**: Delete the function/procedure
+- **Copy Name**: Copy to clipboard
+
+## Searching Objects
+
+### Quick Filter
+
+Filter the sidebar tree in real-time:
+
+<Steps>
+  <Step title="Focus Search Box">
+    Click the search icon at the top of the sidebar or press `Cmd+K`.
+  </Step>
+  <Step title="Type to Filter">
+    Type part of a table, view, or function name.
+  </Step>
+  <Step title="View Results">
+    The tree filters to show only matching items. Categories without matches are hidden.
+  </Step>
+  <Step title="Clear Filter">
+    Delete the search text to show all objects again.
+  </Step>
+</Steps>
+
+<Note>
+  Search is case-insensitive and matches partial strings. For example, "user" matches "users", "user_profiles", and "system_users".
+</Note>
+
+## Managing Databases
+
+### Create Database
+
+Create a new database from the sidebar:
+
+<Steps>
+  <Step title="Open Database Manager">
+    Click the **+** button next to the database dropdown.
+  </Step>
+  <Step title="Enter Details">
+    Provide a database name, character set (MySQL), and template (PostgreSQL).
+  </Step>
+  <Step title="Create">
+    Click **Create Database**. The new database appears in the dropdown.
+  </Step>
+</Steps>
+
+### Switch Database
+
+<Steps>
+  <Step title="Click Dropdown">
+    Click the active database name at the top of the sidebar.
+  </Step>
+  <Step title="Select Database">
+    Choose a different database from the list.
+  </Step>
+  <Step title="Tree Reloads">
+    The sidebar refreshes to show objects from the selected database.
+  </Step>
+</Steps>
+
+### Drop Database
+
+Delete a database and all its objects:
+
+<Steps>
+  <Step title="Open Manager">
+    Click the **+** button → **Manage Databases**.
+  </Step>
+  <Step title="Select Database">
+    Choose the database to delete.
+  </Step>
+  <Step title="Confirm">
+    Click **Drop** and confirm the action. This is permanent and cannot be undone.
+  </Step>
+</Steps>
+
+<Warning>
+  Dropping a database deletes all tables, views, functions, and data. Back up important data before dropping.
+</Warning>
+
+## Creating Objects
+
+### Create Table
+
+<Steps>
+  <Step title="Right-Click Tables">
+    Right-click the **Tables** category in the sidebar.
+  </Step>
+  <Step title="Select Create Table">
+    Choose **Create Table** from the context menu.
+  </Step>
+  <Step title="Define Schema">
+    Add columns, set data types, define primary keys and constraints.
+  </Step>
+  <Step title="Save">
+    Click **Create** to add the table to the database.
+  </Step>
+</Steps>
+
+### Create View
+
+<Steps>
+  <Step title="Right-Click Views">
+    Right-click **Views** → **Create View**.
+  </Step>
+  <Step title="Write Query">
+    Enter the `SELECT` statement that defines the view.
+  </Step>
+  <Step title="Save">
+    Click **Create** to add the view.
+  </Step>
+</Steps>
+
+## Refreshing the Tree
+
+Update the sidebar to reflect external changes:
+
+- **Refresh Button**: Click the refresh icon at the top of the sidebar
+- **Keyboard**: Press `Cmd+R` while focused on the sidebar
+- **Auto-Refresh**: The tree automatically updates after creating/dropping objects in Zequel
+
+<Note>
+  If another tool modifies the database, manually refresh to see the changes.
+</Note>
+
+## Pending Changes Indicator
+
+Tables with unsaved data edits show a blue dot:
+
+- The dot appears next to table names in the sidebar
+- It indicates pending edits, inserts, or deletes in the Data Grid
+- The dot disappears when you apply or discard changes
+
+## Privacy Mode
+
+Hide sensitive data in the sidebar:
+
+<Steps>
+  <Step title="Enable Privacy Mode">
+    Click the eye icon in the status bar or press `Shift+Cmd+P`.
+  </Step>
+  <Step title="Blur Names">
+    All table names, column names, and schema names are blurred.
+  </Step>
+  <Step title="Disable">
+    Click the eye icon again to show names normally.
+  </Step>
+</Steps>
+
+Useful when screensharing or presenting with sensitive database names.
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+K` | Focus search box |
+| `Cmd+R` | Refresh tree |
+| `Shift+Cmd+P` | Toggle Privacy Mode |
+| `Cmd+B` | Toggle sidebar visibility |
+| `Arrow Up/Down` | Navigate tree items |
+| `Enter` | Open selected item |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Search for Large Schemas">
+    In databases with hundreds of tables, use the Quick Filter to narrow the list before scrolling.
+  </Accordion>
+  
+  <Accordion title="Organize with Schemas">
+    For PostgreSQL, organize related tables into custom schemas (e.g., `auth`, `analytics`, `public`) for easier navigation.
+  </Accordion>
+  
+  <Accordion title="Avoid System Tables">
+    Keep **Show System Schemas** disabled unless you need to inspect internal database metadata.
+  </Accordion>
+  
+  <Accordion title="Refresh After External Changes">
+    If you modify the database in another tool (psql, mysql, etc.), refresh the tree in Zequel to see the updates.
+  </Accordion>
+</AccordionGroup>

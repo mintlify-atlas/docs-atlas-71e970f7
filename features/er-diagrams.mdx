@@ -1,0 +1,219 @@
+---
+title: 'ER Diagrams'
+description: 'Visualize database relationships with interactive entity-relationship diagrams'
+---
+
+ER Diagrams provide a visual representation of your database schema, showing tables, columns, and foreign key relationships. Zequel automatically generates diagrams using hierarchical layout algorithms for clarity.
+
+## Opening an ER Diagram
+
+<Steps>
+  <Step title="Create Diagram Tab">
+    Click the **ER Diagram** button in the sidebar or use the connection context menu.
+  </Step>
+  <Step title="Load Schema">
+    Zequel loads all tables from the active database/schema and analyzes foreign key relationships.
+  </Step>
+  <Step title="View Diagram">
+    The diagram appears with tables as nodes and foreign keys as connecting edges.
+  </Step>
+</Steps>
+
+<Note>
+  ER Diagrams are available for PostgreSQL, MySQL, MariaDB, SQLite, DuckDB, and SQL Server. NoSQL databases (MongoDB, Redis) and ClickHouse do not support foreign keys.
+</Note>
+
+## Diagram Layout
+
+### Automatic Positioning
+
+Zequel uses the **ELK (Eclipse Layout Kernel)** algorithm to position tables:
+
+- **Hierarchical Layout**: Tables are arranged left-to-right based on dependencies
+- **Edge Crossing Minimization**: Foreign key lines minimize crossings for readability
+- **Connected Components**: Related table groups are positioned close together
+- **Orthogonal Routing**: Edges use right-angle bends (standard for ER diagrams)
+
+### Node Structure
+
+Each table node displays:
+
+- **Table Name**: Bold header at the top
+- **Column List**: All columns with data types
+- **Primary Key Icon**: 🔑 next to primary key columns
+- **Foreign Key Icon**: 🔗 next to foreign key columns
+- **Referenced Column Icon**: 📌 next to columns referenced by other tables
+
+### Edge Types
+
+Foreign key relationships are shown as directed edges:
+
+- **Arrow Direction**: Points from the foreign key column to the referenced column
+- **Edge Color**: Matches the app theme (light/dark mode)
+- **Hover Highlight**: Edges highlight on hover for clarity
+
+## Interacting with the Diagram
+
+### Navigation
+
+<Tabs>
+  <Tab title="Pan">
+    Click and drag the background to pan around the diagram.
+  </Tab>
+  <Tab title="Zoom">
+    - **Scroll Wheel**: Scroll up/down to zoom in/out
+    - **Zoom Controls**: Click the **+** and **-** buttons in the bottom-right corner
+    - **Fit View**: Click the fit-to-screen button to center and scale the entire diagram
+  </Tab>
+  <Tab title="Select Nodes">
+    Click any table node to select it. Selected nodes have a highlighted border.
+  </Tab>
+</Tabs>
+
+### Table Navigation
+
+Jump to a table's Data Grid view:
+
+<Steps>
+  <Step title="Click Table Node">
+    Click any table in the diagram.
+  </Step>
+  <Step title="Open Table">
+    A new tab opens showing the table's data in the Data Grid.
+  </Step>
+  <Step title="Return to Diagram">
+    Switch back to the ER Diagram tab to continue exploring.
+  </Step>
+</Steps>
+
+## Diagram Controls
+
+### Zoom Controls
+
+Located in the bottom-right corner:
+
+- **Zoom In (+)**: Increase zoom level
+- **Zoom Out (-)**: Decrease zoom level
+- **Fit View**: Auto-scale to show all tables
+- **1:1**: Reset to 100% zoom
+
+### Background Grid
+
+The diagram displays a subtle dot grid:
+
+- **Purpose**: Helps visualize spacing and alignment
+- **Variant**: Dots in light mode, subtle lines in dark mode
+- **Toggle**: Disable in Settings → Diagram Settings (future feature)
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Understanding Schema Structure">
+    Explore an unfamiliar database by visualizing how tables relate to each other. Ideal for onboarding new developers.
+  </Accordion>
+  
+  <Accordion title="Planning Queries">
+    Identify join paths before writing complex multi-table queries. See which foreign keys connect tables.
+  </Accordion>
+  
+  <Accordion title="Database Documentation">
+    Export screenshots of the diagram for technical documentation, presentations, or wikis.
+  </Accordion>
+  
+  <Accordion title="Schema Review">
+    Review foreign key relationships during code reviews or database design sessions.
+  </Accordion>
+</AccordionGroup>
+
+## Exporting Diagrams
+
+Save diagrams as images for documentation:
+
+<Steps>
+  <Step title="Screenshot">
+    Use macOS screenshot tools (`Cmd+Shift+4`) to capture the diagram area.
+  </Step>
+  <Step title="Save Image">
+    Save as PNG or JPG for embedding in docs, Notion, Confluence, etc.
+  </Step>
+</Steps>
+
+<Note>
+  Future versions will include built-in export to SVG, PNG, and PDF formats.
+</Note>
+
+## Diagram Performance
+
+### Large Schemas
+
+For databases with hundreds of tables:
+
+- **Loading Time**: Initial load may take 5-10 seconds as Zequel fetches all table metadata
+- **Rendering**: ELK layout computation is performed in the background
+- **Virtual Rendering**: Only visible nodes are rendered for performance
+
+<Warning>
+  Diagrams with 200+ tables may become difficult to read. Consider filtering to show only related table groups (future feature).
+</Warning>
+
+## Supported Databases
+
+| Database | ER Diagram Support | Notes |
+|----------|-------------------|-------|
+| PostgreSQL | ✅ | Full support with schema selection |
+| MySQL | ✅ | Includes views as nodes |
+| MariaDB | ✅ | Same as MySQL |
+| SQLite | ✅ | Foreign keys supported (if enabled) |
+| DuckDB | ✅ | Limited FK support |
+| SQL Server | ✅ | Full support |
+| MongoDB | ❌ | No foreign keys (document database) |
+| Redis | ❌ | No foreign keys (key-value store) |
+| ClickHouse | ❌ | No foreign keys (analytical database) |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Diagram Not Loading">
+    - Ensure the database connection is active
+    - Check that the active schema/database contains tables
+    - Refresh the connection if schema metadata is stale
+  </Accordion>
+  
+  <Accordion title="Missing Foreign Keys">
+    - For SQLite, ensure foreign keys are enabled: `PRAGMA foreign_keys = ON;`
+    - Check that foreign key constraints exist in the database schema
+    - Verify the database type supports foreign keys
+  </Accordion>
+  
+  <Accordion title="Tables Overlapping">
+    - Click **Fit View** to re-center and scale the diagram
+    - Zoom in to see individual table details
+    - Large schemas may require manual panning to explore all nodes
+  </Accordion>
+  
+  <Accordion title="Slow Performance">
+    - Diagrams with 100+ tables may take time to render
+    - Close other tabs to free up memory
+    - Consider filtering the schema to show only relevant tables (future feature)
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Start with Small Schemas">
+    Test the ER Diagram feature on databases with 10-50 tables before exploring massive schemas.
+  </Accordion>
+  
+  <Accordion title="Use for Documentation">
+    Capture diagram screenshots for README files, architectural decision records (ADRs), and onboarding guides.
+  </Accordion>
+  
+  <Accordion title="Review Before Migrations">
+    Generate an ER diagram before and after schema migrations to verify foreign key relationships are preserved.
+  </Accordion>
+  
+  <Accordion title="Identify Missing FKs">
+    Use the diagram to spot tables that should have foreign keys but don't. Missing edges indicate potential data integrity issues.
+  </Accordion>
+</AccordionGroup>

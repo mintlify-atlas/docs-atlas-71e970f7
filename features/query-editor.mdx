@@ -1,0 +1,226 @@
+---
+title: 'Query Editor'
+description: 'Write and execute SQL queries with intelligent autocomplete and formatting'
+---
+
+The Query Editor provides a powerful, Monaco-based SQL editing environment with syntax highlighting, autocomplete, and execution controls. Write queries efficiently with keyboard shortcuts and transaction management.
+
+## Opening the Query Editor
+
+<Steps>
+  <Step title="Create a Query Tab">
+    Click the **Query** button in the sidebar or press `Cmd+T` to open a new query tab.
+  </Step>
+  <Step title="Connect to Database">
+    Select an active database connection from the sidebar. The editor will load schema metadata for autocomplete.
+  </Step>
+  <Step title="Start Writing">
+    Begin typing SQL queries. Autocomplete suggestions appear as you type.
+  </Step>
+</Steps>
+
+## Editor Features
+
+### SQL Autocomplete
+
+The editor provides intelligent autocomplete based on your database schema:
+
+- **Tables and Views**: Type table names to see suggestions from the active schema
+- **Columns**: After typing a table name and `.`, see all columns for that table
+- **Functions**: Access database-specific functions (e.g., PostgreSQL functions)
+- **Procedures**: Browse stored procedures and routines
+- **Keywords**: SQL keywords with context-aware suggestions
+
+<Note>
+  For PostgreSQL, the editor loads tables from all schemas (not just the active one) to support cross-schema queries.
+</Note>
+
+### Code Formatting
+
+Beautify SQL queries with automatic formatting:
+
+- **Format Selection**: Select a portion of SQL and press `Shift+Alt+F` to format just that section
+- **Format All**: Press `Cmd+I` or use the **Beautify** button to format the entire query
+- **Dialect-Aware**: Formatting respects the syntax rules of your database type (PostgreSQL, MySQL, etc.)
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+Enter` | Run Current Statement |
+| `Shift+Cmd+Enter` | Run All |
+| `Cmd+I` | Format SQL |
+| `Shift+Alt+F` | Format Selection |
+| `Shift+Cmd+S` | Save SQL as File |
+
+## Query Execution
+
+### Run Modes
+
+Choose between two execution modes:
+
+<Tabs>
+  <Tab title="Run Current">
+    Executes the statement under the cursor or the selected text. Perfect for testing individual queries in a multi-statement file.
+    
+    **Default shortcut**: `Cmd+Enter`
+  </Tab>
+  <Tab title="Run All">
+    Executes all statements in the editor from top to bottom.
+    
+    **Shortcut**: `Shift+Cmd+Enter`
+  </Tab>
+</Tabs>
+
+<Note>
+  Change the default run mode by clicking the dropdown arrow next to the **Run** button and selecting **Default → Run Current** or **Run All**.
+</Note>
+
+### Query Limits
+
+Control the maximum number of rows returned:
+
+- Click the **Limit** dropdown to select a row limit (100, 500, 1,000, 5,000, etc.)
+- Select **No limit** to return all rows
+- The limit is automatically appended to `SELECT` queries
+- Your limit preference is saved and persists across sessions
+
+<Warning>
+  Removing the limit on large tables can cause performance issues. Use filters or manual `LIMIT` clauses for large datasets.
+</Warning>
+
+## Transaction Management
+
+### Auto vs Manual Commit
+
+For databases that support transactions (PostgreSQL, MySQL, MariaDB, SQL Server), toggle between:
+
+<Tabs>
+  <Tab title="Auto Commit">
+    Each query is committed immediately after execution. This is the default mode for most database tools.
+  </Tab>
+  <Tab title="Manual Commit">
+    Queries execute within a transaction. You must explicitly commit or rollback changes.
+    
+    **Controls**:
+    - **Begin**: Start a new transaction
+    - **Commit**: Permanently apply changes
+    - **Rollback**: Discard all changes since BEGIN
+  </Tab>
+</Tabs>
+
+<Note>
+  When a transaction is active, an animated indicator appears with the text **Transaction active**.
+</Note>
+
+### Safe Mode
+
+If Safe Mode is enabled for the connection, transaction controls are hidden and all modifications are blocked.
+
+## Query Results
+
+### Results Grid
+
+Query results appear in a data grid below the editor:
+
+- **Sort**: Click column headers to sort ascending/descending
+- **Select Row**: Click a row to view details in the right panel
+- **Export**: Use the status bar export button to save results to CSV, JSON, or SQL
+
+### Status Information
+
+The status bar displays:
+
+- **Row Count**: Total rows returned
+- **Execution Time**: How long the query took to execute
+- **Affected Rows**: For `INSERT`, `UPDATE`, `DELETE` statements
+- **Error Messages**: If the query fails
+
+## Saving Queries
+
+### Add to Queries
+
+Save frequently used queries to the Queries collection:
+
+<Steps>
+  <Step title="Write Your Query">
+    Create and test your SQL query in the editor.
+  </Step>
+  <Step title="Save">
+    Click the dropdown arrow next to **Run** and select **Add to Queries**, or press `Cmd+S`.
+  </Step>
+  <Step title="Access Later">
+    Find saved queries in the **Queries** section of the sidebar.
+  </Step>
+</Steps>
+
+### Export to File
+
+Export the current query to a `.sql` file:
+
+- Click **Run** dropdown → **Save SQL as...**
+- Choose a location and filename
+- Press `Shift+Cmd+S` as a shortcut
+
+## Multi-Statement Queries
+
+### Statement Separation
+
+Write multiple statements separated by semicolons:
+
+```sql
+CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT);
+INSERT INTO users (name) VALUES ('Alice');
+SELECT * FROM users;
+```
+
+- **Run Current** executes only the statement under your cursor
+- **Run All** executes all three statements in order
+
+<Warning>
+  Query limits are only applied to single `SELECT` or `WITH` statements. Multi-statement queries and statements already containing `LIMIT` are executed as-is.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Transactions for Data Changes">
+    When modifying production data, enable Manual Commit mode. Review changes in the results pane before committing.
+  </Accordion>
+  
+  <Accordion title="Test with Limits">
+    Always add a row limit when exploring unfamiliar tables to avoid accidentally loading millions of rows.
+  </Accordion>
+  
+  <Accordion title="Format for Readability">
+    Press `Cmd+I` before saving queries to the Queries collection. Formatted SQL is easier to maintain.
+  </Accordion>
+  
+  <Accordion title="Save Complex Queries">
+    Use **Add to Queries** for reporting queries, data migrations, and complex JOINs you'll need again.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Autocomplete Not Showing">
+    - Ensure you're connected to a database
+    - Check that the database/schema is selected in the sidebar
+    - For PostgreSQL, verify the active schema contains tables
+    - Try typing `.` after a table name to trigger column suggestions
+  </Accordion>
+  
+  <Accordion title="Query Timeout">
+    Long-running queries may timeout. Check:
+    - Database server timeout settings
+    - Query execution plan (use `EXPLAIN` to analyze)
+    - Consider adding indexes for slow queries
+  </Accordion>
+  
+  <Accordion title="Transaction Not Committing">
+    - Look for the **Transaction active** indicator
+    - Click **Commit** to apply changes
+    - If the tab closes with an active transaction, changes are automatically rolled back
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,239 @@
+---
+title: 'MariaDB'
+description: 'Connect to and manage MariaDB databases'
+icon: 'database'
+---
+
+## Overview
+
+MariaDB is a MySQL-compatible relational database created by the original developers of MySQL. Zequel supports MariaDB through the `mysql2` driver (v3.11.5), leveraging full MySQL compatibility.
+
+## Supported Versions
+
+- MariaDB 10.3+
+- MariaDB 10.4+
+- MariaDB 10.5+
+- MariaDB 10.6+
+- MariaDB 10.11+ (LTS)
+- MariaDB 11.0+
+- MariaDB 11.1+
+- MariaDB 11.2+
+
+## Connection
+
+### Basic Connection
+
+```
+Host: localhost
+Port: 3306
+Database: mysql
+Username: root
+Password: your_password
+```
+
+### Connection String Format
+
+```
+mariadb://user:password@localhost:3306/database
+mysql://user:password@localhost:3306/database
+```
+
+<Note>
+MariaDB uses the same connection protocol as MySQL, so `mysql://` URIs work with MariaDB servers.
+</Note>
+
+### SSL/TLS Configuration
+
+Same as MySQL - supports all SSL modes:
+
+- Disable
+- Prefer (try SSL, fallback to non-SSL)
+- Require
+- Verify-CA
+- Verify-Full
+
+## Features
+
+MariaDB inherits all MySQL features plus additional enhancements:
+
+### MySQL-Compatible Features
+
+- Tables, views, and stored procedures
+- Triggers and events
+- Indexes (BTREE, HASH, FULLTEXT, SPATIAL)
+- Foreign key constraints
+- Transactions with InnoDB
+- Users and privileges
+- Partitions
+- Character sets and collations
+
+See the [MySQL documentation](/databases/mysql) for detailed information on these features.
+
+### MariaDB-Specific Enhancements
+
+#### Sequences (MariaDB 10.3+)
+
+Native sequence support as an alternative to AUTO_INCREMENT:
+
+```sql
+CREATE SEQUENCE seq_user_id
+  START WITH 1000
+  INCREMENT BY 1
+  MINVALUE 1000
+  MAXVALUE 999999
+  CACHE 100;
+
+INSERT INTO users (id, name) VALUES (NEXT VALUE FOR seq_user_id, 'John');
+```
+
+#### System-Versioned Tables (MariaDB 10.3+)
+
+Temporal tables with automatic history tracking:
+
+```sql
+CREATE TABLE employees (
+  id INT PRIMARY KEY,
+  name VARCHAR(100),
+  salary DECIMAL(10,2)
+) WITH SYSTEM VERSIONING;
+
+-- Query historical data
+SELECT * FROM employees FOR SYSTEM_TIME AS OF '2024-01-01';
+```
+
+#### JSON Functions (MariaDB 10.6+)
+
+Enhanced JSON support with table functions:
+
+```sql
+SELECT * FROM JSON_TABLE(
+  '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]',
+  '$[*]' COLUMNS(
+    id INT PATH '$.id',
+    name VARCHAR(50) PATH '$.name'
+  )
+) AS users;
+```
+
+#### Oracle Compatibility Mode
+
+Optional Oracle SQL syntax compatibility:
+
+```sql
+SET sql_mode = 'ORACLE';
+```
+
+### Storage Engines
+
+MariaDB includes additional storage engines:
+
+- **InnoDB** (default) - ACID transactions
+- **Aria** - Crash-safe MyISAM replacement
+- **MyRocks** - RocksDB-based engine
+- **ColumnStore** - Columnar storage for analytics
+- **CONNECT** - Connect to external data sources
+- **Spider** - Sharding and partitioning
+
+## Data Types
+
+<Tabs>
+  <Tab title="Numeric">
+    - TINYINT, SMALLINT, MEDIUMINT, INT, BIGINT
+    - DECIMAL, NUMERIC
+    - FLOAT, DOUBLE
+    - BIT
+  </Tab>
+  <Tab title="String">
+    - VARCHAR(n), CHAR(n)
+    - TEXT, TINYTEXT, MEDIUMTEXT, LONGTEXT
+    - BINARY, VARBINARY
+    - BLOB, TINYBLOB, MEDIUMBLOB, LONGBLOB
+    - ENUM, SET
+  </Tab>
+  <Tab title="Date/Time">
+    - DATE
+    - TIME
+    - DATETIME
+    - TIMESTAMP
+    - YEAR
+  </Tab>
+  <Tab title="Other">
+    - JSON (native support since 10.2)
+    - UUID (native type in 10.7+)
+    - INET4, INET6 (10.10+)
+    - GEOMETRY, POINT, LINESTRING, POLYGON
+  </Tab>
+</Tabs>
+
+## Differences from MySQL
+
+While MariaDB maintains MySQL compatibility, there are some differences:
+
+### Advantages over MySQL
+
+- **Better performance** in many workloads
+- **More storage engines** (Aria, MyRocks, ColumnStore)
+- **Sequences** as first-class objects
+- **System versioning** for temporal tables
+- **Thread pool** for better connection handling
+- **Faster replication** with parallel slave threads
+
+### Compatibility Notes
+
+- Most MySQL 8.0 features are supported in MariaDB 10.6+
+- Some MySQL 8.0-specific features may not be available
+- Binary replication between MySQL 8.0 and MariaDB requires testing
+
+<Warning>
+If you're migrating between MySQL and MariaDB, test thoroughly as some internal differences may affect application behavior.
+</Warning>
+
+## Version Detection
+
+Zequel automatically detects MariaDB vs MySQL:
+
+```sql
+SELECT VERSION();
+-- Returns: 11.2.2-MariaDB
+```
+
+The driver checks for "MariaDB" in the version string to enable MariaDB-specific features.
+
+## Docker Development
+
+Zequel includes MariaDB in Docker Compose:
+
+```yaml
+services:
+  mariadb:
+    image: mariadb:11.2
+    ports:
+      - "3307:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: mariadb
+    volumes:
+      - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+The seed database includes:
+- Tables with various storage engines
+- Views and stored procedures
+- Triggers and events
+- System-versioned tables (if supported)
+- Sequences (if supported)
+- Users and privileges
+
+## Best Practices
+
+1. **Use Aria** for non-transactional tables instead of MyISAM
+2. **Enable thread pool** for high-concurrency workloads
+3. **Use sequences** instead of AUTO_INCREMENT for distributed systems
+4. **Consider system versioning** for audit requirements
+5. **Monitor with Performance Schema** for query optimization
+6. **Use utf8mb4** charset for full Unicode support
+
+## Additional Resources
+
+- [MariaDB vs MySQL differences](https://mariadb.com/kb/en/mariadb-vs-mysql-compatibility/)
+- [Migrating from MySQL to MariaDB](https://mariadb.com/kb/en/upgrading-from-mysql-to-mariadb/)
+- [MariaDB-specific features](https://mariadb.com/kb/en/mariadb-features/)

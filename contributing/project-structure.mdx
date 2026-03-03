@@ -1,0 +1,341 @@
+---
+title: 'Project Structure'
+description: 'Navigate the Zequel codebase organization'
+---
+
+## Overview
+
+Zequel is an Electron application built with Vue 3, TypeScript, and Tailwind CSS. The codebase is organized into three main process types:
+
+- **Main Process** - Node.js backend (database connections, IPC handlers)
+- **Renderer Process** - Vue 3 frontend (UI components, state management)
+- **Preload Scripts** - Secure bridge between main and renderer
+
+## Directory Structure
+
+```
+zequel/
+├── src/
+│   ├── main/              # Electron main process (Node.js)
+│   ├── renderer/          # Vue 3 frontend
+│   ├── preload/           # Preload scripts (IPC bridge)
+│   └── tests/             # All tests
+├── build/                 # Build assets (icons, entitlements)
+├── docker/                # Docker Compose seed scripts
+├── docs/                  # VitePress documentation
+├── resources/             # App resources (icons)
+└── dist/                  # Build output (gitignored)
+```
+
+## Main Process (`src/main/`)
+
+The main process runs in Node.js and handles database operations, file system access, and native APIs.
+
+```
+src/main/
+├── db/                    # Database drivers and connection managers
+│   ├── base.ts            # Base driver interface
+│   ├── postgres.ts        # PostgreSQL driver
+│   ├── mysql.ts           # MySQL driver
+│   ├── mariadb.ts         # MariaDB driver
+│   ├── sqlite.ts          # SQLite driver
+│   ├── duckdb.ts          # DuckDB driver
+│   ├── mongodb.ts         # MongoDB driver
+│   ├── redis.ts           # Redis driver
+│   ├── clickhouse.ts      # ClickHouse driver
+│   ├── sqlserver.ts       # SQL Server driver
+│   ├── manager.ts         # Connection pool manager
+│   ├── cursors/           # Streaming cursor implementations
+│   └── knex-duckdb/       # Custom Knex dialect for DuckDB
+├── ipc/                   # IPC handlers (renderer ↔ main communication)
+│   ├── index.ts           # Handler registration
+│   ├── connection.ts      # Connection management handlers
+│   ├── query.ts           # Query execution handlers
+│   ├── schema.ts          # Schema introspection handlers
+│   ├── stream.ts          # Data streaming handlers
+│   ├── backup.ts          # Backup/restore handlers
+│   ├── export.ts          # Export handlers
+│   ├── import.ts          # Import handlers
+│   ├── monitoring.ts      # Process monitoring handlers
+│   └── ...
+├── services/              # Business logic services
+│   ├── connections.ts     # Connection CRUD operations
+│   ├── database.ts        # App database (SQLite for settings)
+│   ├── keychain.ts        # Secure credential storage
+│   ├── queryHistory.ts    # Query history management
+│   ├── backup.ts          # Backup operations
+│   ├── ssh-tunnel.ts      # SSH tunnel management
+│   ├── autoUpdater.ts     # App update service
+│   └── ...
+├── migrations/            # App database schema migrations
+│   ├── 001_create_connections.ts
+│   ├── 002_create_query_history.ts
+│   └── ...
+├── types/                 # Main process TypeScript types
+│   ├── index.ts           # Core types (Connection, Database, Table, etc.)
+│   └── schema-operations.ts  # Schema editing operation types
+├── utils/                 # Utility functions
+│   ├── logger.ts          # Logging utility
+│   ├── format.ts          # Data formatting
+│   └── serialize.ts       # BigInt/Date serialization
+├── index.ts               # Main process entry point
+└── menu.ts                # Native menu configuration
+```
+
+### Key Files
+
+<AccordionGroup>
+  <Accordion title="src/main/index.ts">
+    **Main process entry point**. Handles:
+    - App lifecycle (ready, quit, window management)
+    - Browser window creation
+    - IPC handler registration
+    - Auto-updater initialization
+    - Connection cleanup on quit
+  </Accordion>
+  
+  <Accordion title="src/main/db/manager.ts">
+    **Connection pool manager**. Manages active database connections:
+    - Connect/disconnect with connection pooling
+    - Session ID-based connection tracking
+    - Automatic reconnection on connection loss
+    - Cleanup on window close
+  </Accordion>
+  
+  <Accordion title="src/main/ipc/index.ts">
+    **IPC handler registration**. Registers all `ipcMain.handle()` listeners that the renderer can invoke.
+  </Accordion>
+</AccordionGroup>
+
+## Renderer Process (`src/renderer/`)
+
+The renderer process is a Vue 3 single-page application with TypeScript and Tailwind CSS.
+
+```
+src/renderer/
+├── components/            # Vue components (PascalCase filenames)
+│   ├── backup/            # Backup wizard components
+│   ├── connection/        # Connection form and list
+│   ├── dialogs/           # Modal dialogs
+│   ├── er-diagram/        # ER diagram viewer
+│   ├── query/             # Query editor components
+│   ├── schema/            # Schema browser components
+│   ├── table/             # Data grid components
+│   ├── ui/                # Reka UI wrapped primitives (Button, Dialog, etc.)
+│   └── ...
+├── composables/           # Composable functions (useXxx pattern)
+│   ├── useQuery.ts        # Query execution logic
+│   ├── useSchema.ts       # Schema fetching
+│   ├── useExport.ts       # Export functionality
+│   ├── useTabs.ts         # Tab management
+│   └── ...
+├── stores/                # Pinia state stores (composition API)
+│   ├── useConnectionsStore.ts  # Connection state
+│   ├── useTabsStore.ts         # Query tabs state
+│   ├── useSettingsStore.ts     # App settings
+│   └── ...
+├── views/                 # Page-level components
+│   ├── HomeView.vue       # Connection manager
+│   ├── DatabaseView.vue   # Main database interface
+│   └── ...
+├── types/                 # Renderer TypeScript types and enums
+│   ├── index.ts           # UI-specific types
+│   └── ...
+├── lib/                   # Utility libraries
+│   ├── utils.ts           # cn() class merger, helpers
+│   ├── formatters.ts      # Data formatting
+│   ├── sql-helpers.ts     # SQL syntax utilities
+│   └── ...
+├── directives/            # Vue directives
+│   └── click-outside.ts   # Click outside directive
+├── assets/                # Static assets (images, styles)
+│   ├── images/            # Database logos
+│   └── main.css           # Global styles
+├── App.vue                # Root Vue component
+├── main.ts                # Renderer entry point (Vue app init)
+└── index.html             # HTML template
+```
+
+### Key Patterns
+
+<AccordionGroup>
+  <Accordion title="Components">
+    **PascalCase filenames**, `<script setup lang="ts">` pattern:
+    
+    ```vue
+    <script setup lang="ts">
+    import { cn } from '@/lib/utils';
+    
+    interface Props {
+      variant?: 'default' | 'outline';
+      class?: string;
+    }
+    
+    const props = withDefaults(defineProps<Props>(), {
+      variant: 'default',
+    });
+    </script>
+    
+    <template>
+      <div :class="cn('base-classes', props.class)">
+        <slot />
+      </div>
+    </template>
+    ```
+  </Accordion>
+  
+  <Accordion title="Stores (Pinia)">
+    **Composition API** pattern with `useXxxStore` naming:
+    
+    ```typescript
+    export const useConnectionsStore = defineStore('connections', () => {
+      const connections = ref<SavedConnection[]>([]);
+      const activeConnection = computed(() => { /* ... */ });
+      
+      const loadConnections = async () => { /* ... */ };
+      
+      return { connections, activeConnection, loadConnections };
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Composables">
+    **Reusable logic** with `useXxx` naming:
+    
+    ```typescript
+    export const useKeyboardShortcuts = () => {
+      const shortcuts: KeyboardShortcut[] = [/* ... */];
+      
+      const handleKeydown = (event: KeyboardEvent) => { /* ... */ };
+      
+      onMounted(() => window.addEventListener('keydown', handleKeydown));
+      onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
+      
+      return { shortcuts, handleKeydown };
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Preload Scripts (`src/preload/`)
+
+Preload scripts bridge the main and renderer processes using Electron's `contextBridge` API.
+
+```
+src/preload/
+├── index.ts               # API exposure via contextBridge
+└── index.d.ts             # TypeScript declarations for window.api
+```
+
+**Key file**: `src/preload/index.ts` exposes a type-safe `window.api` object to the renderer:
+
+```typescript
+const api = {
+  connections: {
+    list: () => ipcRenderer.invoke('connection:list'),
+    save: (config) => ipcRenderer.invoke('connection:save', toPlain(config)),
+    // ...
+  },
+  query: {
+    execute: (connectionId, sql, params) => 
+      ipcRenderer.invoke('query:execute', connectionId, sql, params),
+    // ...
+  },
+  // ...
+};
+
+contextBridge.exposeInMainWorld('api', api);
+```
+
+The renderer accesses this API via `window.api.connections.list()`, etc.
+
+## Tests (`src/tests/`)
+
+Tests mirror the source structure and are organized by type.
+
+```
+src/tests/
+├── unit/                  # Unit tests (mocked dependencies)
+│   ├── main/              # Main process unit tests
+│   │   ├── connections.test.ts
+│   │   ├── backup.test.ts
+│   │   └── ...
+│   └── renderer/          # Renderer unit tests
+│       ├── formatters.test.ts
+│       └── ...
+├── integration/           # Integration tests (real databases)
+│   └── main/
+│       ├── postgres-seed.test.ts
+│       ├── mysql-seed.test.ts
+│       └── ...
+├── e2e/                   # End-to-end tests (Playwright)
+│   ├── tests/             # Test files
+│   │   ├── connection.test.ts
+│   │   ├── query-editor.test.ts
+│   │   └── ...
+│   ├── fixtures/          # Test data
+│   └── utils/             # Test helpers
+└── setup.ts               # Global test setup
+```
+
+See [Testing Guide](/contributing/testing) for details.
+
+## Import Aliases
+
+Zequel uses path aliases to avoid relative imports:
+
+| Alias | Path | Used In |
+|-------|------|----------|
+| `@` | `src/renderer` | Renderer, unit tests |
+| `@main` | `src/main` | Main, preload, all tests |
+| `@e2e` | `src/tests/e2e` | E2E tests |
+
+<Warning>
+**Never use relative paths** (`../`) for imports. Always use aliases:
+
+```typescript
+// Good
+import { useConnectionsStore } from '@/stores/useConnectionsStore';
+import { DatabaseType } from '@main/types';
+
+// Bad
+import { useConnectionsStore } from '../../stores/useConnectionsStore';
+```
+</Warning>
+
+## File Naming Conventions
+
+| Type | Convention | Example |
+|------|------------|----------|
+| Components | PascalCase | `ConnectionDialog.vue` |
+| Composables | camelCase, `use` prefix | `useQuery.ts` |
+| Stores | camelCase, `use` prefix + `Store` suffix | `useConnectionsStore.ts` |
+| Constants | UPPER_SNAKE_CASE | `MAX_CONNECTIONS` |
+| Enums | PascalCase | `DatabaseType`, `QueryStatus` |
+
+## Build Configuration
+
+Key configuration files:
+
+- **electron.vite.config.ts** - Electron Vite build configuration
+- **tsconfig.json** - Base TypeScript config
+- **tsconfig.node.json** - Main process TypeScript config
+- **tsconfig.web.json** - Renderer process TypeScript config
+- **tsconfig.e2e.json** - E2E test TypeScript config
+- **vitest.config.ts** - Vitest test configuration
+- **playwright.config.ts** - Playwright E2E configuration
+- **package.json** - Dependencies and scripts
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/contributing/architecture">
+    Understand the Electron architecture
+  </Card>
+  <Card title="Testing" icon="flask" href="/contributing/testing">
+    Write and run tests
+  </Card>
+  <Card title="Database Adapters" icon="database" href="/contributing/database-adapters">
+    Learn how database drivers work
+  </Card>
+</CardGroup>

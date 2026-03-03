@@ -1,0 +1,365 @@
+---
+title: Interface Overview
+description: Learn about the main components of the Zequel user interface
+---
+
+Zequel's interface is designed for efficient database management with a clear layout and powerful features. This guide covers all major UI components and how to use them.
+
+## Main Layout
+
+The Zequel interface consists of four primary areas:
+
+```
+┌─────────────────────────────────────────────────┐
+│  Title Bar (macOS only)                        │
+├──────────┬──────────────────────────────────────┤
+│          │  Tabs                                │
+│          ├──────────────────────────────────────┤
+│ Sidebar  │                                      │
+│          │  Main Content Area                   │
+│          │                                      │
+│          │                                      │
+├──────────┴──────────────────────────────────────┤
+│  Status Bar                                     │
+└─────────────────────────────────────────────────┘
+```
+
+## Title Bar (macOS)
+
+On macOS, Zequel uses a native title bar with drag area and window controls. The title bar height is 38px and includes:
+
+- Application name
+- Window controls (close, minimize, maximize)
+- Drag area for moving the window
+
+<Note>
+  Windows and Linux builds use the system's native window frame instead of a custom title bar.
+</Note>
+
+## Sidebar
+
+The left sidebar is your primary navigation tool, containing:
+
+### Connection List
+
+View and manage all saved database connections:
+
+- **Connection cards** show connection name, type, and environment
+- **Color coding** helps identify connections at a glance
+- **Connection status** indicators (disconnected, connecting, connected, error)
+- **Folder organization** to group related connections
+- **Recent connections** appear at the top for quick access
+
+**Actions:**
+- Click a connection to connect/disconnect
+- Right-click for context menu options (edit, duplicate, delete)
+- Drag connections to reorder or move between folders
+
+### Schema Browser
+
+When connected, the sidebar displays the database schema tree:
+
+- **Databases** - Expand to browse all databases on the server
+- **Tables** - View all tables with column counts
+- **Views** - Browse database views
+- **Materialized Views** - See materialized views (PostgreSQL)
+- **Routines** - Stored procedures and functions
+- **Triggers** - Database triggers
+- **Sequences** - Auto-increment sequences (PostgreSQL)
+- **Enums** - Enumerated types (PostgreSQL)
+- **Extensions** - Installed extensions (PostgreSQL)
+- **Events** - Scheduled events (MySQL/MariaDB)
+- **Users** - Database users and roles
+
+**Features:**
+- **Search box** (`Cmd+L` / `Ctrl+L`) - Quickly find schema objects by name
+- **Expandable tree** - Click arrows to expand/collapse sections
+- **Context menus** - Right-click objects for available actions
+- **Icons** - Visual indicators for object types
+
+<Note>
+  The schema browser content varies by database type. MongoDB shows collections instead of tables, while Redis displays key patterns.
+</Note>
+
+### Sidebar Controls
+
+- **New Connection** button - Create a new database connection
+- **Refresh** button - Reload the schema browser
+- **Collapse/Expand** toggles - Manage tree visibility
+
+## Tabs
+
+Zequel uses a tab-based interface for working with multiple views simultaneously:
+
+### Tab Types
+
+- **Query Tab** - SQL editor for running queries
+- **Table Tab** - Data grid showing table contents
+- **Structure Tab** - Table structure and schema information
+- **Backup Tab** - Database backup interface
+- **Restore Tab** - Database restore interface
+- **Users Tab** - User and role management
+- **Monitoring Tab** - Process and connection monitoring
+- **ER Diagram Tab** - Visual entity-relationship diagrams
+
+### Tab Features
+
+- **Multiple tabs** - Open as many tabs as needed
+- **Tab switching** - Click tabs or use keyboard shortcuts (`Cmd+1-9`, `Cmd+]`, `Cmd+[`)
+- **Close tabs** - Click the × button or press `Cmd+W` / `Ctrl+W`
+- **Tab state** - Each tab maintains its own state (query text, scroll position, etc.)
+- **Tab indicators** - Visual markers for unsaved changes or running queries
+
+**Keyboard Shortcuts:**
+- `Cmd+T` / `Ctrl+T` - New query tab
+- `Cmd+E` / `Ctrl+E` - Open SQL query tab
+- `Cmd+W` / `Ctrl+W` - Close current tab
+- `Cmd+1-9` - Jump to tab 1-9
+- `Cmd+]` / `Ctrl+Tab` - Next tab
+- `Cmd+[` / `Ctrl+Shift+Tab` - Previous tab
+
+## Main Content Area
+
+The main content area displays the active tab's content. The layout varies by tab type:
+
+### Query View
+
+Split into two panels:
+
+**Top Panel: Monaco Editor**
+- Full-featured code editor with syntax highlighting
+- Auto-completion for tables, columns, and keywords
+- Multiple cursor support
+- Find and replace
+- SQL formatting
+- Line numbers and minimap
+
+**Bottom Panel: Results Grid**
+- Data grid showing query results
+- Column sorting and filtering
+- Export options
+- Execution statistics (time, rows affected)
+
+**Splitter:**
+- Drag the divider between panels to resize
+- Double-click to reset to default size
+
+### Table View
+
+Tabs for different aspects of the table:
+
+- **Data** - Virtual-scrolled data grid with in-cell editing
+- **Structure** - Column definitions, data types, constraints
+- **Indexes** - View and manage table indexes
+- **Foreign Keys** - Relationship definitions
+- **Triggers** - Table-specific triggers
+- **Options** - Table-level settings and statistics
+
+### ER Diagram View
+
+Interactive canvas showing:
+
+- **Entity boxes** - Tables with columns and types
+- **Relationships** - Lines connecting foreign keys
+- **Controls** - Zoom, pan, fit to screen
+- **Minimap** - Overview of entire diagram
+- **Layout options** - Automatic or manual positioning
+
+**Powered by:**
+- `@vue-flow/core` - Interactive diagram rendering
+- `elkjs` - Automatic layout algorithm
+
+### Backup/Restore Views
+
+Forms for database backup and restoration:
+
+- **File selection** - Choose backup file location
+- **Options** - Configure backup/restore settings
+- **Progress** - Real-time progress indicators
+- **Logs** - Detailed operation logs
+
+### Monitoring View
+
+Real-time process information:
+
+- **Process list** - Active queries and connections
+- **Statistics** - CPU, memory, query counts
+- **Kill actions** - Terminate running queries
+- **Refresh** - Auto-refresh every few seconds
+
+## Data Grid
+
+Zequel's data grid is a core component used throughout the application:
+
+### Features
+
+- **Virtual scrolling** - Efficiently handle millions of rows
+- **In-cell editing** - Double-click cells to edit
+- **Column operations:**
+  - Sort (click header)
+  - Filter (click filter icon)
+  - Resize (drag column edge)
+  - Reorder (drag column header)
+  - Hide/show (right-click header)
+- **Row selection** - Click to select, Shift+click for range, Cmd+click for multi-select
+- **Bulk operations** - Delete, copy, or export selected rows
+- **Keyboard navigation** - Arrow keys, Tab, Enter
+- **Copy/paste** - Standard clipboard operations
+- **Undo/redo** - Full history for data changes
+
+**Powered by:**
+- `@tanstack/vue-table` - Table state management
+- `@tanstack/vue-virtual` - Virtual scrolling
+
+### Data Editing
+
+When you edit cells:
+
+1. **Change tracking** - Modified cells are highlighted
+2. **Status bar updates** - Shows count of pending changes
+3. **Commit/discard buttons** appear in the toolbar
+4. **Validation** - Type checking and constraint validation
+5. **Save** - Press `Cmd+S` / `Ctrl+S` to commit changes
+6. **Discard** - Press `Cmd+Shift+Backspace` to revert
+
+<Warning>
+  Changes are not saved to the database until you explicitly commit them. Closing a tab with unsaved changes will prompt for confirmation.
+</Warning>
+
+## Status Bar
+
+The bottom status bar displays:
+
+- **Connection info** - Active database and connection name
+- **Database type** - Icon and name of current database system
+- **Row count** - Number of rows in current view/result
+- **Selected rows** - Count of selected rows
+- **Pending changes** - Number of uncommitted edits
+- **Query status** - Execution time and result statistics
+- **Background tasks** - Import/export/backup progress
+
+## Command Palette
+
+Access the command palette with `Cmd+K` / `Ctrl+K` or `Cmd+P` / `Ctrl+P`:
+
+### Features
+
+- **Fuzzy search** - Type to filter commands
+- **Recent items** - Recently accessed tables and views
+- **Quick actions** - Navigate to any schema object
+- **Keyboard-driven** - Arrow keys to navigate, Enter to execute
+
+**Common Actions:**
+- Open tables, views, routines
+- Switch between connections
+- Create new tabs
+- Run backup/restore operations
+- Access settings and preferences
+
+## Context Menus
+
+Right-click elements throughout the interface for context-sensitive actions:
+
+### Connection Context Menu
+- Edit connection
+- Duplicate connection
+- Delete connection
+- Disconnect
+- Refresh schema
+
+### Table Context Menu
+- View data
+- View structure
+- Edit table
+- Truncate table
+- Drop table
+- Export data
+- Generate SQL
+
+### Column Context Menu
+- Copy column name
+- Copy as SELECT
+- Filter by value
+- Sort ascending/descending
+- Hide column
+
+### Cell Context Menu
+- Copy value
+- Copy as INSERT
+- Set NULL
+- Filter by value
+- Revert change
+
+## Dialogs
+
+Zequel uses dialogs for focused tasks:
+
+### Connection Dialog
+Create and edit database connections with form validation and test functionality.
+
+### Keyboard Shortcuts Dialog
+View all available shortcuts, organized by category. Access with `Cmd+Shift+?` / `Ctrl+Shift+?` or `F1`.
+
+### Settings Dialog
+Configure application preferences (accessed via `Cmd+,` / `Ctrl+,`).
+
+### Confirmation Dialogs
+Confirm destructive actions (delete, truncate, drop).
+
+## Theme
+
+Zequel supports both light and dark themes:
+
+- **Auto-switch** - Follows system theme by default
+- **Manual toggle** - Override system preference
+- **Consistent styling** - All components adapt to theme
+- **Monaco editor** - Uses `vs` (light) or `vs-dark` themes
+
+**Technology:**
+- Built with Tailwind CSS
+- Reka UI component primitives
+- Custom CVA (class-variance-authority) variants
+
+## Notifications
+
+Toast notifications appear in the top-right corner for:
+
+- Connection status changes
+- Query execution results
+- Error messages
+- Success confirmations
+- Background task completions
+
+**Powered by:** `vue-sonner`
+
+## Keyboard Shortcuts
+
+View all keyboard shortcuts by pressing `F1` or `Cmd+Shift+?` / `Ctrl+Shift+?`.
+
+**Categories:**
+- **Tabs** - Create, close, and navigate tabs
+- **Query** - Execute, format, save queries
+- **Navigation** - Move between UI elements
+- **Editor** - Monaco editor shortcuts
+- **General** - Application-wide actions
+
+<Note>
+  On macOS, keyboard shortcuts use `Cmd` (⌘). On Windows and Linux, they use `Ctrl`. The shortcuts dialog automatically shows the correct keys for your platform.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Query Editor" icon="code" href="/features/query-editor">
+    Learn advanced query editor features
+  </Card>
+  <Card title="Working with Tables" icon="table" href="/features/data-grid">
+    Master the data grid and table operations
+  </Card>
+  <Card title="Keyboard Shortcuts" icon="keyboard" href="/advanced/keyboard-shortcuts">
+    Complete list of keyboard shortcuts
+  </Card>
+  <Card title="Import & Export" icon="exchange" href="/features/import-export">
+    Import and export data in multiple formats
+  </Card>
+</CardGroup>

@@ -1,0 +1,140 @@
+---
+title: Introduction
+description: A modern, open-source database management GUI for macOS, Windows, and Linux
+---
+
+Zequel is a powerful database management GUI built with Electron and Vue 3, designed to simplify working with multiple database systems through an intuitive, feature-rich interface.
+
+## Why Zequel?
+
+Zequel brings together the tools you need for efficient database management in a single, cross-platform application:
+
+- **Multi-database support** - Connect to PostgreSQL, MySQL, MariaDB, SQLite, DuckDB, MongoDB, Redis, ClickHouse, and SQL Server from one application
+- **Modern interface** - Built with Vue 3 and Tailwind CSS for a responsive, clean user experience
+- **Advanced query editor** - Monaco-based editor with syntax highlighting, auto-completion, and intelligent SQL snippets
+- **Visual data exploration** - Interactive ER diagrams, data grids with virtual scrolling, and schema visualization
+- **Secure connections** - SSL/TLS support, SSH tunneling, and OS-level credential storage via keychain integration
+- **Cross-platform** - Native builds for macOS (Intel + Apple Silicon), Windows, and Linux
+
+## Supported Databases
+
+<CardGroup cols={3}>
+  <Card title="PostgreSQL" icon="database">
+    Versions 12 through latest, with SSH tunnel support
+  </Card>
+  <Card title="MySQL" icon="database">
+    Versions 5.7 through latest, with SSH tunnel support
+  </Card>
+  <Card title="MariaDB" icon="database">
+    Versions 10.4 through latest, with SSH tunnel support
+  </Card>
+  <Card title="SQLite" icon="database">
+    Version 3+ with bundled SQLite engine
+  </Card>
+  <Card title="DuckDB" icon="database">
+    Version 1.0+ with bundled DuckDB engine
+  </Card>
+  <Card title="MongoDB" icon="database">
+    Versions 4.2 through latest, with SSH tunnel support
+  </Card>
+  <Card title="Redis" icon="database">
+    Versions 6.0 through latest, with SSH tunnel support
+  </Card>
+  <Card title="ClickHouse" icon="database">
+    Versions 22.8 through latest, with SSH tunnel support
+  </Card>
+  <Card title="SQL Server" icon="database">
+    Versions 2012 through latest, with SSH tunnel support
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Query Editor
+
+The Monaco-based query editor provides a professional development experience with:
+- Syntax highlighting for all supported SQL dialects
+- Intelligent auto-completion for tables, columns, and SQL keywords
+- Multiple query tabs with independent execution contexts
+- Parameterized query support
+- EXPLAIN query visualization
+- 30+ pre-built SQL snippets per database dialect
+- Query history and saved queries
+
+### Schema Browser
+
+Explore and manage your database structure:
+- Browse databases, tables, views, and materialized views
+- Inspect columns, indexes, and foreign key relationships
+- View and edit stored procedures, functions, and triggers
+- Manage sequences, enums, and database extensions
+- Quick search across all schema objects
+
+### Data Grid
+
+Work with data efficiently:
+- Virtual scrolling for millions of rows
+- In-cell editing with type validation
+- Column filtering, sorting, and search
+- Drag-to-reorder and resize columns
+- Multi-row selection and bulk operations
+- Full undo/redo support for data changes
+- Export to CSV, JSON, SQL, and Excel
+
+### ER Diagrams
+
+Visualize database relationships:
+- Interactive entity-relationship diagrams
+- Automatic layout with elkjs
+- Zoom and pan controls
+- Visual representation of foreign key relationships
+
+### Security & Connectivity
+
+Secure access to your databases:
+- SSL/TLS connections with certificate verification
+- SSH tunnel support for remote databases
+- OS-level credential storage (keychain on macOS, Credential Manager on Windows)
+- Multiple authentication methods (password, private key)
+
+### Process Monitoring
+
+View and manage database activity:
+- Real-time process/connection monitoring
+- Query execution statistics
+- Kill running queries or connections
+- Database-specific process information
+
+### Additional Features
+
+- **Command Palette** - Quick access to all actions via `Cmd+K` / `Ctrl+K`
+- **Dark/Light Theme** - Automatic theme switching based on system preference
+- **Keyboard Shortcuts** - Comprehensive shortcuts for all common operations
+- **Backup/Restore** - Database backup and restoration tools
+- **Import/Export** - Support for CSV, JSON, SQL, and Excel formats
+- **Auto-updates** - Automatic application updates via electron-updater
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Download and install Zequel on your platform
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Connect to your first database in minutes
+  </Card>
+  <Card title="Interface Overview" icon="layout" href="/interface-overview">
+    Learn about the main UI components
+  </Card>
+  <Card title="Keyboard Shortcuts" icon="keyboard" href="/advanced/keyboard-shortcuts">
+    Master the keyboard shortcuts for efficient workflow
+  </Card>
+</CardGroup>
+
+## Open Source
+
+Zequel is open-source software licensed under the Elastic License 2.0. View the source code, report issues, or contribute on [GitHub](https://github.com/zequel-labs/zequel).
+
+<Note>
+  Zequel is built with modern web technologies including Electron, Vue 3, TypeScript, and Tailwind CSS. The architecture follows best practices with a clear separation between main process (Node.js) and renderer process (Vue frontend).
+</Note>

@@ -1,0 +1,275 @@
+---
+title: 'MySQL'
+description: 'Connect to and manage MySQL databases'
+icon: 'database'
+---
+
+## Overview
+
+MySQL is the world's most popular open-source relational database. Zequel provides full support for MySQL through the official `mysql2` driver (v3.11.5).
+
+## Supported Versions
+
+- MySQL 5.7+
+- MySQL 8.0+
+- MySQL 8.1+
+- MySQL 8.2+
+- MySQL 8.3+
+
+## Connection
+
+### Basic Connection
+
+```
+Host: localhost
+Port: 3306
+Database: mysql
+Username: root
+Password: your_password
+```
+
+### Connection String Format
+
+```
+mysql://user:password@localhost:3306/database
+```
+
+### SSL/TLS Configuration
+
+MySQL supports SSL connections with certificate validation:
+
+- **Disable**: No SSL encryption
+- **Prefer**: Try SSL first, fallback to non-SSL
+- **Require**: Require SSL connection
+- **Verify-CA**: Verify certificate authority
+- **Verify-Full**: Verify CA and hostname
+
+<CodeGroup>
+```javascript SSL Example
+{
+  ssl: true,
+  sslConfig: {
+    mode: 'verify-ca',
+    ca: fs.readFileSync('ca.pem'),
+    rejectUnauthorized: true
+  }
+}
+```
+</CodeGroup>
+
+## Features
+
+### Databases & Tables
+
+- Create, rename, and drop databases
+- Full table management with CREATE, ALTER, DROP
+- Table comments and metadata
+- Row count and size information
+
+### Data Types
+
+Zequel supports all MySQL data types:
+
+<Tabs>
+  <Tab title="Numeric">
+    - TINYINT, SMALLINT, MEDIUMINT, INT, BIGINT
+    - DECIMAL, NUMERIC (with precision/scale)
+    - FLOAT, DOUBLE
+    - BIT
+  </Tab>
+  <Tab title="String">
+    - VARCHAR(n), CHAR(n)
+    - TEXT, TINYTEXT, MEDIUMTEXT, LONGTEXT
+    - BINARY, VARBINARY
+    - BLOB, TINYBLOB, MEDIUMBLOB, LONGBLOB
+    - ENUM, SET
+  </Tab>
+  <Tab title="Date/Time">
+    - DATE
+    - TIME
+    - DATETIME
+    - TIMESTAMP
+    - YEAR
+  </Tab>
+  <Tab title="Other">
+    - JSON
+    - GEOMETRY, POINT, LINESTRING, POLYGON
+  </Tab>
+</Tabs>
+
+### Indexes
+
+- **BTREE** (default)
+- **HASH**
+- **FULLTEXT** for text search
+- **SPATIAL** for geometry types
+- Unique and composite indexes
+- Primary key indexes
+
+### Constraints
+
+- Primary keys with AUTO_INCREMENT
+- Foreign keys with referential actions:
+  - ON UPDATE: CASCADE, SET NULL, RESTRICT, NO ACTION
+  - ON DELETE: CASCADE, SET NULL, RESTRICT, NO ACTION
+- Unique constraints
+- NOT NULL constraints
+
+### Stored Procedures & Functions
+
+- Create and execute stored procedures
+- User-defined functions
+- Parameter support (IN, OUT, INOUT)
+- Language: SQL
+
+```sql
+CREATE PROCEDURE get_user(IN user_id INT)
+BEGIN
+  SELECT * FROM users WHERE id = user_id;
+END;
+```
+
+### Triggers
+
+- **Timing**: BEFORE, AFTER
+- **Events**: INSERT, UPDATE, DELETE
+- FOR EACH ROW execution
+
+```sql
+CREATE TRIGGER update_timestamp
+BEFORE UPDATE ON users
+FOR EACH ROW
+BEGIN
+  SET NEW.updated_at = NOW();
+END;
+```
+
+### Views
+
+- Create and manage views
+- CREATE OR REPLACE VIEW support
+- Rename views using RENAME TABLE
+
+### Events (Scheduler)
+
+Manage scheduled tasks:
+
+- **ONE TIME** events with AT timestamp
+- **RECURRING** events with EVERY interval
+- Event status: ENABLED, DISABLED
+- ON COMPLETION: PRESERVE, NOT PRESERVE
+
+```sql
+CREATE EVENT cleanup_logs
+ON SCHEDULE EVERY 1 DAY
+DO
+  DELETE FROM logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+```
+
+### Users & Privileges
+
+- Create and drop users
+- User@host combinations
+- Password management
+- Privilege viewing (requires elevated permissions)
+
+## MySQL-Specific Features
+
+### Charset & Collation
+
+Manage character sets and collations:
+
+- View available charsets (utf8mb4, latin1, etc.)
+- View collations for each charset
+- Set table charset: `ALTER TABLE tbl CONVERT TO CHARACTER SET utf8mb4`
+- Set database charset: `ALTER DATABASE db CHARACTER SET utf8mb4`
+
+### Partitions
+
+View and manage table partitions:
+
+- **RANGE** partitioning
+- **LIST** partitioning
+- **HASH** partitioning
+- **KEY** partitioning
+- View partition metadata (rows, size, compression)
+
+### Storage Engines
+
+MySQL supports multiple storage engines:
+
+- **InnoDB** (default) - ACID transactions, foreign keys
+- **MyISAM** - Fast reads, no transactions
+- **MEMORY** - In-memory tables
+- **CSV** - Comma-separated values
+
+### Column Positioning
+
+MySQL allows specifying column order:
+
+```sql
+ALTER TABLE users ADD COLUMN email VARCHAR(255) AFTER name;
+ALTER TABLE users ADD COLUMN id INT FIRST;
+```
+
+## Advanced Features
+
+### Transactions
+
+Full ACID transaction support with InnoDB:
+
+```sql
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+COMMIT;
+```
+
+### Query Streaming
+
+Large result sets are streamed using server-side cursors to prevent memory issues.
+
+### Query Cancellation
+
+Active queries can be cancelled using `KILL QUERY [connection_id]`.
+
+## Limitations
+
+<Warning>
+  - Foreign key constraints require InnoDB storage engine
+  - Some DDL operations (like adding foreign keys) may require disabling foreign key checks temporarily
+  - AUTO_INCREMENT can only be used with indexed columns
+</Warning>
+
+## Docker Development
+
+Zequel includes MySQL in Docker Compose:
+
+```yaml
+services:
+  mysql:
+    image: mysql:8.3
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+    volumes:
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+The seed database includes:
+- Tables with various data types and engines
+- Views and stored procedures
+- Functions and triggers
+- Events and scheduled tasks
+- Partitioned tables
+- Users with different privileges
+
+## Best Practices
+
+1. **Use InnoDB** for tables requiring transactions and foreign keys
+2. **Enable SSL** for production connections
+3. **Use utf8mb4** charset for full Unicode support
+4. **Set max_connections** appropriately for your workload
+5. **Monitor slow query log** to identify performance bottlenecks
+6. **Use prepared statements** to prevent SQL injection

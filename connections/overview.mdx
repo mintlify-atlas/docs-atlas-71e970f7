@@ -1,0 +1,379 @@
+---
+title: 'Connections Overview'
+description: 'Create, manage, and organize database connections in Zequel'
+---
+
+Zequel allows you to create and manage connections to multiple database types with support for SSL/TLS encryption, SSH tunneling, and connection organization.
+
+## Supported Databases
+
+Zequel supports 9 database types:
+
+- **PostgreSQL** - Full-featured relational database
+- **MySQL** - Popular open-source relational database
+- **MariaDB** - MySQL fork with enhanced features
+- **SQL Server** - Microsoft's enterprise database
+- **SQLite** - Embedded file-based database
+- **DuckDB** - In-process analytical database
+- **ClickHouse** - Column-oriented OLAP database
+- **MongoDB** - Document-oriented NoSQL database
+- **Redis** - In-memory key-value store
+
+## Creating a Connection
+
+Connections are created and stored in Zequel's local SQLite database. Each connection configuration includes:
+
+### Basic Configuration
+
+<ParamField path="name" type="string" required>
+  Display name for the connection
+</ParamField>
+
+<ParamField path="type" type="DatabaseType" required>
+  Database type (postgresql, mysql, mariadb, sqlserver, sqlite, duckdb, clickhouse, mongodb, redis)
+</ParamField>
+
+<ParamField path="host" type="string">
+  Database server hostname or IP address (not required for SQLite/DuckDB)
+</ParamField>
+
+<ParamField path="port" type="number">
+  Database server port. Defaults:
+  - PostgreSQL: 5432
+  - MySQL/MariaDB: 3306
+  - SQL Server: 1433
+  - MongoDB: 27017
+  - Redis: 6379
+  - ClickHouse: 8123
+</ParamField>
+
+<ParamField path="database" type="string">
+  Database/schema name to connect to
+</ParamField>
+
+<ParamField path="username" type="string">
+  Authentication username
+</ParamField>
+
+<ParamField path="password" type="string">
+  Authentication password (stored securely)
+</ParamField>
+
+### File-Based Databases
+
+For SQLite and DuckDB:
+
+<ParamField path="filepath" type="string" required>
+  Absolute path to the database file
+</ParamField>
+
+### Security Options
+
+<ParamField path="ssl" type="boolean">
+  Enable SSL/TLS encryption (see [SSL/TLS Configuration](/connections/ssl-tls))
+</ParamField>
+
+<ParamField path="ssh" type="SSHConfig">
+  SSH tunnel configuration (see [SSH Tunneling](/connections/ssh-tunneling))
+</ParamField>
+
+<ParamField path="trustServerCertificate" type="boolean">
+  SQL Server only: Accept self-signed certificates
+</ParamField>
+
+## Connection Management
+
+### Saving Connections
+
+Connections are persisted using the `ConnectionsService`:
+
+```typescript
+interface SavedConnection {
+  id: string
+  name: string
+  type: DatabaseType
+  host: string | null
+  port: number | null
+  database: string
+  username: string | null
+  filepath: string | null
+  ssl: boolean
+  sslConfig: SSLConfig | null
+  ssh: SSHConfig | null
+  color: string | null
+  environment: ConnectionEnvironment | null
+  folder: string | null
+  trustServerCertificate: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  lastConnectedAt: string | null
+}
+```
+
+### Organizing Connections
+
+Connections can be organized with:
+
+<Steps>
+  <Step title="Folders">
+    Group connections into named folders for better organization
+    
+    ```typescript
+    // Get all folder names
+    const folders = connectionsService.getFolders()
+    
+    // Move connection to folder
+    connectionsService.updateFolder(connectionId, 'Production')
+    
+    // Rename folder
+    connectionsService.renameFolder('Old Name', 'New Name')
+    ```
+  </Step>
+
+  <Step title="Environment Labels">
+    Tag connections with environment types:
+    - `development`
+    - `staging`
+    - `production`
+    - `testing`
+  </Step>
+
+  <Step title="Custom Colors">
+    Assign color codes for visual identification
+  </Step>
+
+  <Step title="Sort Order">
+    Manually arrange connections with drag-and-drop
+    
+    ```typescript
+    connectionsService.updatePositions([
+      { id: 'conn1', sortOrder: 0, folder: 'Production' },
+      { id: 'conn2', sortOrder: 1, folder: 'Production' }
+    ])
+    ```
+  </Step>
+</Steps>
+
+## Connection Sessions
+
+When you connect to a database, Zequel creates a session with a unique ID separate from the saved connection ID:
+
+```typescript
+// Connect and get session ID
+const sessionId = await connectionManager.connect(config)
+
+// Session tracks:
+// - Active database driver instance
+// - SSH tunnel (if configured)
+// - Health check interval
+// - Connection configuration
+```
+
+### Session Management
+
+The `ConnectionManager` handles:
+
+- **Health Checks** - Automatic ping every 30 seconds (PostgreSQL, MySQL, MariaDB, SQL Server, MongoDB, Redis)
+- **Auto-Reconnect** - Up to 5 reconnection attempts with exponential backoff (1s, 2s, 4s, 8s, 16s)
+- **SSH Tunnels** - Lifecycle management tied to session
+- **Query Logging** - All queries logged with execution time
+
+<Note>
+  SQLite, DuckDB, and ClickHouse skip health checks as they use different connection models
+</Note>
+
+### Connection Status Events
+
+Zequel emits real-time connection status events:
+
+```typescript
+type ConnectionStatus = 
+  | 'connected'
+  | 'disconnected'
+  | 'reconnecting'
+  | 'error'
+
+emitConnectionStatus({
+  connectionId: sessionId,
+  status: ConnectionStatusType.Connected
+})
+```
+
+## Testing Connections
+
+Before saving, test the connection to verify credentials and network access:
+
+```typescript
+const result = await connectionManager.testConnection(config)
+
+interface TestConnectionResult {
+  success: boolean
+  error?: string
+  latency?: number          // Connection time in ms
+  serverVersion?: string    // Database version
+  serverInfo?: Record<string, string>
+  sshSuccess?: boolean      // SSH tunnel status
+  sshError?: string         // SSH error if failed
+}
+```
+
+<CodeGroup>
+
+```typescript PostgreSQL Test
+const result = await testConnection({
+  type: DatabaseType.PostgreSQL,
+  host: 'localhost',
+  port: 5432,
+  database: 'mydb',
+  username: 'postgres',
+  password: 'password'
+})
+
+// Returns server info:
+// - Encoding
+// - Timezone
+// - Max Connections
+```
+
+```typescript MySQL Test
+const result = await testConnection({
+  type: DatabaseType.MySQL,
+  host: 'localhost',
+  port: 3306,
+  database: 'mydb',
+  username: 'root',
+  password: 'password'
+})
+
+// Returns server info:
+// - Charset
+// - Max Connections
+// - Timezone
+```
+
+```typescript SSH Tunnel Test
+const result = await testConnection({
+  type: DatabaseType.PostgreSQL,
+  host: 'internal-db.example.com',
+  port: 5432,
+  database: 'production',
+  username: 'app_user',
+  password: 'secret',
+  ssh: {
+    enabled: true,
+    host: 'bastion.example.com',
+    port: 22,
+    username: 'ubuntu',
+    authMethod: 'privateKey',
+    privateKey: '-----BEGIN OPENSSH PRIVATE KEY-----...'
+  }
+})
+
+// Tests both SSH tunnel AND database connection
+// Returns sshSuccess: true if tunnel works
+```
+
+</CodeGroup>
+
+## Connection Lifecycle
+
+<Steps>
+  <Step title="Configure">
+    Create connection configuration with credentials and optional SSH/SSL settings
+  </Step>
+
+  <Step title="Test">
+    Verify connection parameters work before saving
+  </Step>
+
+  <Step title="Save">
+    Persist connection to local database (passwords stored securely)
+  </Step>
+
+  <Step title="Connect">
+    Establish session with database driver
+    - Create SSH tunnel if configured
+    - Initialize database driver (pg, mysql2, mssql, etc.)
+    - Start health check interval
+    - Wrap driver for query logging
+  </Step>
+
+  <Step title="Use">
+    Execute queries, browse schema, manage data
+  </Step>
+
+  <Step title="Disconnect">
+    Close session and cleanup resources
+    - Stop health checks
+    - Close database connection
+    - Close SSH tunnel
+    - Remove from connection pool
+  </Step>
+</Steps>
+
+## Error Handling
+
+Connection errors are handled gracefully:
+
+<Warning>
+  If a connection is lost, Zequel will:
+  1. Emit `reconnecting` status event
+  2. Attempt up to 5 reconnections with exponential backoff
+  3. Recreate SSH tunnel if needed
+  4. Emit `connected` on success or `error` if all attempts fail
+</Warning>
+
+To manually trigger reconnection:
+
+```typescript
+const success = await connectionManager.reconnect(sessionId)
+```
+
+## Multiple Connections
+
+You can open multiple sessions to the same saved connection:
+
+```typescript
+// Each session gets a unique ID
+const session1 = await connectionManager.connect(config)
+const session2 = await connectionManager.connect(config)
+
+// Find all sessions for a saved connection
+const sessions = connectionManager.getSessionsForSavedConnection(savedId)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use folders to organize connections">
+    Group connections by environment, project, or client to keep your workspace organized.
+  </Accordion>
+
+  <Accordion title="Test before saving">
+    Always test connections before saving to catch configuration errors early.
+  </Accordion>
+
+  <Accordion title="Use environment labels">
+    Tag production databases to avoid accidental modifications.
+  </Accordion>
+
+  <Accordion title="Enable SSH tunneling for remote databases">
+    Use SSH tunnels instead of exposing databases directly to the internet.
+  </Accordion>
+
+  <Accordion title="Use SSL/TLS in production">
+    Enable SSL with certificate verification for production databases.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="SSH Tunneling" icon="key" href="/connections/ssh-tunneling">
+    Securely connect to remote databases through SSH
+  </Card>
+  <Card title="SSL/TLS Configuration" icon="lock" href="/connections/ssl-tls">
+    Encrypt database connections with SSL/TLS
+  </Card>
+</CardGroup>

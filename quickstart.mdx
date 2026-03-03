@@ -1,80 +1,319 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Connect to your first database and start exploring your data in minutes
 ---
 
-## Get started in three steps
+This guide will help you connect to a database and perform your first queries in Zequel.
 
-Get your documentation site running locally and make your first customization.
+## Your First Connection
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Open Zequel">
+    Launch Zequel from your applications folder. You'll see the welcome screen with options to create a new connection.
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Create a new connection">
+    Click **New Connection** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux).
 
-### Step 2: Deploy your changes
+    The connection dialog will appear with options for all supported database types.
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Step title="Select your database type">
+    Choose your database from the available options:
+    - **PostgreSQL** - Port 5432 (default)
+    - **MySQL** - Port 3306 (default)
+    - **MariaDB** - Port 3306 (default)
+    - **SQLite** - Local file-based database
+    - **DuckDB** - Local file-based analytics database
+    - **MongoDB** - Port 27017 (default)
+    - **Redis** - Port 6379 (default)
+    - **ClickHouse** - Port 8123 (default)
+    - **SQL Server** - Port 1433 (default)
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Enter connection details">
+    Fill in the connection information based on your database type:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ### For Server-Based Databases (PostgreSQL, MySQL, etc.)
 
-### Step 3: Go live
+    - **Name**: A friendly name for this connection (e.g., "Production DB")
+    - **Host**: The server hostname or IP address
+    - **Port**: The database port (pre-filled with defaults)
+    - **Database**: The database name to connect to
+    - **Username**: Your database username
+    - **Password**: Your database password
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ### For File-Based Databases (SQLite, DuckDB)
 
-## Next steps
+    - **Name**: A friendly name for this connection
+    - **File Path**: Click **Browse** to select your database file, or enter a path to create a new database
 
-Now that you have your docs running, explore these key features:
+    <Note>
+      For SQLite and DuckDB, if the file doesn't exist, Zequel will create a new database at the specified path.
+    </Note>
+  </Step>
 
-<CardGroup cols={2}>
+  <Step title="Configure advanced options (optional)">
+    Expand the **Advanced** section to configure:
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    ### SSL/TLS Connection
+    - Enable **Use SSL/TLS** for encrypted connections
+    - Choose SSL mode: `disable`, `prefer`, `require`, `verify-ca`, or `verify-full`
+    - Upload SSL certificates if required
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+    ### SSH Tunnel
+    - Enable **Use SSH Tunnel** to connect through a bastion/jump host
+    - Enter SSH host, port, and username
+    - Choose authentication: **Password** or **Private Key**
+    - Provide credentials or upload your private key file
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+    ### Connection Metadata
+    - **Environment**: Tag as `production`, `staging`, `development`, `testing`, or `local`
+    - **Color**: Assign a color for quick visual identification
+    - **Folder**: Organize connections into folders
+  </Step>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+  <Step title="Test and save">
+    Click **Test Connection** to verify your settings.
 
-</CardGroup>
+    If the test succeeds, click **Save** to store the connection. If it fails, check the error message and verify your credentials and network settings.
+
+    <Warning>
+      Passwords are stored securely in your operating system's keychain (macOS Keychain, Windows Credential Manager, or Linux Secret Service).
+    </Warning>
+  </Step>
+
+  <Step title="Connect to the database">
+    Click the connection in the sidebar to establish the connection. You'll see the database schema browser appear with all your databases, tables, and views.
+  </Step>
+</Steps>
+
+## Quick Connection Examples
+
+### Local SQLite Database
+
+<Steps>
+  <Step title="Select SQLite">
+    Choose **SQLite** as the database type
+  </Step>
+
+  <Step title="Create or open a file">
+    - To create a new database: Enter `/Users/yourname/my-database.db` (macOS/Linux) or `C:\Users\yourname\my-database.db` (Windows)
+    - To open an existing database: Click **Browse** and select your `.db` file
+  </Step>
+
+  <Step title="Connect">
+    Click **Save** and then click the connection to open it
+  </Step>
+</Steps>
+
+### Local PostgreSQL
+
+<Steps>
+  <Step title="Select PostgreSQL">
+    Choose **PostgreSQL** as the database type
+  </Step>
+
+  <Step title="Enter local connection details">
+    - **Host**: `localhost` or `127.0.0.1`
+    - **Port**: `5432`
+    - **Database**: `postgres` (or your database name)
+    - **Username**: `postgres` (or your username)
+    - **Password**: Your PostgreSQL password
+  </Step>
+
+  <Step title="Save and connect">
+    Click **Test Connection**, then **Save**, then click the connection to open it
+  </Step>
+</Steps>
+
+### Remote MySQL with SSH Tunnel
+
+<Steps>
+  <Step title="Select MySQL">
+    Choose **MySQL** as the database type
+  </Step>
+
+  <Step title="Enter database details">
+    - **Host**: `localhost` (the host as seen from the SSH server)
+    - **Port**: `3306`
+    - **Database**: Your database name
+    - **Username**: Your MySQL username
+    - **Password**: Your MySQL password
+  </Step>
+
+  <Step title="Configure SSH tunnel">
+    In the **Advanced** section, enable **Use SSH Tunnel**:
+    - **SSH Host**: Your bastion/jump server hostname or IP
+    - **SSH Port**: `22`
+    - **SSH Username**: Your SSH username
+    - **Auth Method**: Choose **Password** or **Private Key**
+    - Provide your SSH credentials
+  </Step>
+
+  <Step title="Test and connect">
+    Click **Test Connection** to verify both SSH and database connections work
+  </Step>
+</Steps>
+
+## Exploring Your Database
+
+Once connected, you can start exploring:
+
+### Schema Browser
+
+The left sidebar shows your database structure:
+
+- **Databases**: Expand to see all databases on the server
+- **Tables**: Click a table to view its structure and data
+- **Views**: Browse database views
+- **Routines**: View stored procedures and functions
+- **Triggers**: See database triggers
+- **Sequences**: Browse sequences (PostgreSQL)
+- **Extensions**: View installed extensions (PostgreSQL)
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Use `Cmd+L` (macOS) or `Ctrl+L` (Windows/Linux) to quickly focus the schema search box and find tables, views, or other objects.
 </Note>
+
+### Viewing Table Data
+
+<Steps>
+  <Step title="Select a table">
+    In the schema browser, click any table name
+  </Step>
+
+  <Step title="Browse the data grid">
+    The main panel shows the table data with:
+    - Virtual scrolling for large datasets
+    - Column sorting (click column headers)
+    - Column filtering (click filter icon)
+    - Column resize and reorder (drag column headers)
+  </Step>
+
+  <Step title="Edit data in-cell">
+    Double-click any cell to edit its value. Changes are tracked and shown in the status bar.
+  </Step>
+
+  <Step title="Commit or discard changes">
+    - **Commit**: Press `Cmd+S` (macOS) / `Ctrl+S` (Windows/Linux) or click the commit button
+    - **Discard**: Press `Cmd+Shift+Backspace` or click the discard button
+  </Step>
+</Steps>
+
+### Running Your First Query
+
+<Steps>
+  <Step title="Open the query editor">
+    Click **New Query Tab** or press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux)
+  </Step>
+
+  <Step title="Write your SQL query">
+    Type your query in the Monaco editor. You'll get:
+    - Syntax highlighting
+    - Auto-completion for table and column names
+    - SQL keyword suggestions
+
+    Example:
+    ```sql
+    SELECT * FROM users WHERE created_at > '2024-01-01' LIMIT 100;
+    ```
+  </Step>
+
+  <Step title="Execute the query">
+    Press `Cmd+Enter` (macOS) / `Ctrl+Enter` (Windows/Linux) to run the entire query, or `Cmd+Shift+Enter` to run only the selected text.
+  </Step>
+
+  <Step title="View results">
+    Results appear in the data grid below the editor, showing:
+    - All columns and rows returned
+    - Execution time
+    - Number of rows affected
+  </Step>
+</Steps>
+
+### Using SQL Snippets
+
+Zequel includes 30+ pre-built SQL snippets for each database dialect:
+
+<Steps>
+  <Step title="Open the query editor">
+    Create a new query tab if you haven't already
+  </Step>
+
+  <Step title="Access snippets">
+    Start typing `select`, `insert`, `create`, or other SQL keywords and press `Ctrl+Space` to see snippet suggestions
+  </Step>
+
+  <Step title="Insert a snippet">
+    Select a snippet from the auto-complete menu. Snippets include:
+    - `SELECT` statements with common patterns
+    - `INSERT`, `UPDATE`, `DELETE` templates
+    - `CREATE TABLE`, `CREATE INDEX` examples
+    - Database-specific queries (CTEs, window functions, etc.)
+  </Step>
+</Steps>
+
+## Command Palette
+
+Access all Zequel features quickly with the command palette:
+
+<Steps>
+  <Step title="Open the command palette">
+    Press `Cmd+K` or `Cmd+P` (macOS) / `Ctrl+K` or `Ctrl+P` (Windows/Linux)
+  </Step>
+
+  <Step title="Search for actions">
+    Type to filter available commands:
+    - Open tables, views, or other schema objects
+    - Navigate to different sections
+    - Execute common operations
+  </Step>
+
+  <Step title="Execute">
+    Press Enter to execute the selected command
+  </Step>
+</Steps>
+
+## Keyboard Shortcuts
+
+Master these essential shortcuts for efficient workflow:
+
+### Tabs
+- `Cmd+T` / `Ctrl+T` - New query tab
+- `Cmd+W` / `Ctrl+W` - Close current tab
+- `Cmd+1-9` - Switch to tab 1-9
+- `Cmd+]` / `Ctrl+Tab` - Next tab
+- `Cmd+[` / `Ctrl+Shift+Tab` - Previous tab
+
+### Query Editor
+- `Cmd+Enter` / `Ctrl+Enter` - Execute query
+- `Cmd+Shift+Enter` - Execute selection
+- `Cmd+Shift+F` / `Ctrl+Shift+F` - Format SQL
+- `Cmd+S` / `Ctrl+S` - Commit changes
+
+### Navigation
+- `Cmd+L` / `Ctrl+L` - Focus sidebar search
+- `Cmd+K` / `Ctrl+K` - Open command palette
+- `Cmd+R` / `Ctrl+R` - Refresh data
+
+<Note>
+  Press `Cmd+Shift+?` (macOS) / `Ctrl+Shift+?` (Windows/Linux) or `F1` to see all keyboard shortcuts.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Interface Overview" icon="layout" href="/interface-overview">
+    Learn about all UI components and features
+  </Card>
+  <Card title="Working with Tables" icon="table" href="/features/data-grid">
+    Master data grid features and table operations
+  </Card>
+  <Card title="Query Editor" icon="code" href="/features/query-editor">
+    Advanced query editor features and tips
+  </Card>
+  <Card title="Import & Export" icon="exchange" href="/features/import-export">
+    Import and export data in multiple formats
+  </Card>
+</CardGroup>

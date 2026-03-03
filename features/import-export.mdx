@@ -1,0 +1,389 @@
+---
+title: 'Import & Export'
+description: 'Transfer data between databases and files in CSV, JSON, and SQL formats'
+---
+
+Zequel provides powerful import and export features for moving data in and out of your databases. Import data from CSV and JSON files, and export query results or entire tables to multiple formats.
+
+## Exporting Data
+
+### Export Formats
+
+Zequel supports three export formats:
+
+<Tabs>
+  <Tab title="CSV">
+    **Comma-Separated Values** — universally compatible spreadsheet format.
+    
+    - Configurable delimiters: comma, semicolon, tab, pipe
+    - Optional headers row
+    - NULL handling: export as empty string or "NULL"
+    - Perfect for Excel, Google Sheets, data analysis tools
+  </Tab>
+  <Tab title="JSON">
+    **JavaScript Object Notation** — ideal for APIs and web applications.
+    
+    - Array of objects (one object per row)
+    - Optional pretty-printing with indentation
+    - Preserves data types (strings, numbers, booleans, null)
+    - Easy to parse in JavaScript, Python, Go, etc.
+  </Tab>
+  <Tab title="SQL">
+    **SQL INSERT statements** — for transferring data between databases.
+    
+    - Generates `INSERT INTO` statements
+    - Optional schema qualification (e.g., `public.users`)
+    - Optional `CREATE TABLE` statement before inserts
+    - Ready to execute in any SQL database
+  </Tab>
+</Tabs>
+
+### Export Query Results
+
+Export the results of any query:
+
+<Steps>
+  <Step title="Run Query">
+    Execute a query in the Query Editor to populate the results grid.
+  </Step>
+  <Step title="Click Export">
+    Click the export button in the status bar (or right-click → **Export Data**).
+  </Step>
+  <Step title="Choose Format">
+    Select CSV, JSON, or SQL from the tabs.
+  </Step>
+  <Step title="Configure Options">
+    Set format-specific options (delimiter, headers, pretty print, etc.).
+  </Step>
+  <Step title="Save File">
+    Choose a destination and filename. Click **Export** to save.
+  </Step>
+</Steps>
+
+<Note>
+  Query result exports are limited to the rows returned by your query. Use `LIMIT` or filters to control the dataset size.
+</Note>
+
+### Export Table Data
+
+Export all rows from a table:
+
+<Steps>
+  <Step title="Open Table">
+    Open a table in the Data Grid view.
+  </Step>
+  <Step title="Full Table Export">
+    Click the export button in the status bar. This exports **all rows**, not just the current page.
+  </Step>
+  <Step title="Configure Format">
+    Choose CSV, JSON, or SQL and set options.
+  </Step>
+  <Step title="Stream Export">
+    Zequel streams rows directly from the database to the file, handling millions of rows efficiently.
+  </Step>
+</Steps>
+
+<Warning>
+  Exporting large tables (millions of rows) can take several minutes. The export runs in the background.
+</Warning>
+
+### Export Current Page
+
+Export only the rows visible in the current Data Grid page:
+
+<Steps>
+  <Step title="Right-Click in Grid">
+    Right-click anywhere in the Data Grid.
+  </Step>
+  <Step title="Select Export Page">
+    Choose **Export Page** from the context menu.
+  </Step>
+  <Step title="Configure and Save">
+    Select format, set options, and save the file.
+  </Step>
+</Steps>
+
+Useful for exporting a filtered subset or the first N rows.
+
+### CSV Export Options
+
+- **Delimiter**: Choose comma, semicolon, tab, or pipe
+- **Include Headers**: Add column names as the first row
+- **NULL as Empty**: Export `NULL` values as empty strings (blank cells) or the literal text "NULL"
+
+**Example CSV Output**:
+
+```csv
+id,name,email,created_at
+1,Alice,alice@example.com,2024-01-15 10:30:00
+2,Bob,bob@example.com,2024-01-16 14:22:00
+```
+
+### JSON Export Options
+
+- **Pretty Print**: Format JSON with indentation for readability
+
+**Example JSON Output** (pretty-printed):
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "created_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": 2,
+    "name": "Bob",
+    "email": "bob@example.com",
+    "created_at": "2024-01-16T14:22:00Z"
+  }
+]
+```
+
+### SQL Export Options
+
+- **Include Schema**: Qualify table names with schema (e.g., `public.users`)
+- **Create Table**: Add a `CREATE TABLE` statement before `INSERT` statements
+
+**Example SQL Output**:
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE
+);
+
+INSERT INTO users (id, name, email) VALUES (1, 'Alice', 'alice@example.com');
+INSERT INTO users (id, name, email) VALUES (2, 'Bob', 'bob@example.com');
+```
+
+## Importing Data
+
+### Import Formats
+
+Zequel supports importing from:
+
+- **CSV**: Comma-separated values with optional headers
+- **JSON**: Array of objects (one object per row)
+
+<Note>
+  SQL imports are not yet supported. Use the Query Editor to execute SQL files.
+</Note>
+
+### Import CSV or JSON
+
+Import data into an existing table:
+
+<Steps>
+  <Step title="Open Table">
+    Open the target table in the Data Grid view.
+  </Step>
+  <Step title="Start Import">
+    Right-click in the grid → **Import CSV** or **Import JSON**.
+  </Step>
+  <Step title="Select File">
+    A file picker opens. Choose the CSV or JSON file to import.
+  </Step>
+  <Step title="Preview Data">
+    Zequel displays a preview of the first 10 rows with detected column names and types.
+  </Step>
+  <Step title="Configure Options">
+    - **File has headers**: Toggle if the first row contains column names
+    - **Delimiter** (CSV only): Select comma, semicolon, tab, or pipe
+    - **Clear table before import**: Truncate the table before inserting new rows
+  </Step>
+  <Step title="Map Columns">
+    Click **Continue to Mapping** to map source columns to table columns.
+  </Step>
+  <Step title="Review Mapping">
+    Each source column is auto-matched to a table column (by name). Adjust mappings or skip columns as needed.
+  </Step>
+  <Step title="Execute Import">
+    Click **Import X Rows** to begin. Zequel inserts rows in batches of 100.
+  </Step>
+  <Step title="View Results">
+    A summary shows the number of rows imported and any errors encountered.
+  </Step>
+</Steps>
+
+### Column Mapping
+
+Zequel automatically maps columns by name (case-insensitive):
+
+- **Auto-Matched**: Columns with matching names are pre-selected
+- **Skip Columns**: Set a column's target to "Skip column" to ignore it
+- **Type Conversion**: Zequel attempts to convert source values to the target column's data type
+
+**Example**:
+
+CSV columns: `user_id`, `full_name`, `email_address`  
+Table columns: `id`, `name`, `email`
+
+Mapping:
+- `user_id` → `id`
+- `full_name` → `name`
+- `email_address` → `email`
+
+### Import Options
+
+#### File Has Headers
+
+Toggle this option if your CSV/JSON file includes column names:
+
+- **Enabled**: First row is treated as headers and used for column mapping
+- **Disabled**: All rows are treated as data; columns are named `Column1`, `Column2`, etc.
+
+#### Delimiter (CSV Only)
+
+Select the character that separates columns:
+
+- **Comma (`,`)**: Standard CSV format
+- **Semicolon (`;`)**: Common in European locales
+- **Tab**: TSV (tab-separated values)
+- **Pipe (`|`)**: Alternative delimiter
+
+#### Clear Table Before Import
+
+Enable this option to **truncate** the table before importing:
+
+- All existing rows are deleted
+- Auto-increment counters are reset (database-dependent)
+- New data is inserted into an empty table
+
+<Warning>
+  **Clear table before import** permanently deletes all existing rows. Back up important data first.
+</Warning>
+
+### Import Errors
+
+If rows fail to import:
+
+- **Type Mismatches**: Source value cannot be converted to target column type (e.g., text → integer)
+- **Constraint Violations**: Primary key duplicates, unique constraint violations, NOT NULL violations
+- **Foreign Key Errors**: Referenced rows do not exist
+
+The import summary displays up to 50 error messages. Successfully imported rows are committed even if some rows fail.
+
+### Batch Import Performance
+
+Zequel inserts rows in batches of 100 for performance:
+
+- **Small Files** (under 1,000 rows): Import completes in seconds
+- **Medium Files** (1,000-10,000 rows): ~10-30 seconds
+- **Large Files** (over 10,000 rows): Several minutes; progress is shown
+
+<Note>
+  Importing millions of rows may take a long time. Consider using database-native tools (e.g., `COPY` for PostgreSQL, `LOAD DATA` for MySQL) for bulk imports.
+</Note>
+
+## Paste Rows from Clipboard
+
+Quickly import data from Excel or Google Sheets:
+
+<Steps>
+  <Step title="Copy Rows">
+    In Excel or Google Sheets, select rows including the header row. Press `Cmd+C` to copy.
+  </Step>
+  <Step title="Paste in Zequel">
+    Open the target table in Zequel. Right-click in the Data Grid → **Paste Rows** (or press `Cmd+V`).
+  </Step>
+  <Step title="Column Matching">
+    Zequel matches clipboard headers to table columns (case-insensitive) and inserts rows.
+  </Step>
+  <Step title="Refresh Grid">
+    Rows are inserted immediately. Click **Refresh** to see them in the grid.
+  </Step>
+</Steps>
+
+**Supported Formats**:
+
+- **Tab-separated (TSV)**: Default copy format from Excel/Sheets
+- **Comma-separated (CSV)**: If copied from a CSV file
+
+<Note>
+  Paste Rows is ideal for small datasets (up to 100 rows). For larger imports, use the Import CSV/JSON feature.
+</Note>
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Migrating Data Between Databases">
+    Export a table as SQL from one database and execute the SQL in another database to replicate the data.
+  </Accordion>
+  
+  <Accordion title="Seeding Test Data">
+    Export production data as CSV, anonymize it, and import into a staging or development database.
+  </Accordion>
+  
+  <Accordion title="Sharing Query Results">
+    Export query results as CSV or JSON and share with colleagues who don't have database access.
+  </Accordion>
+  
+  <Accordion title="Importing External Data">
+    Import customer lists, analytics exports, or third-party datasets from CSV/JSON files into your database.
+  </Accordion>
+  
+  <Accordion title="Backup and Restore">
+    Export critical tables as SQL for quick snapshots. Import the SQL to restore data.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Validate Before Import">
+    Review the data preview and column mappings before clicking **Import**. Mismatched types can cause errors.
+  </Accordion>
+  
+  <Accordion title="Use Transactions for Large Imports">
+    For databases supporting manual transactions, enable Manual Commit mode before importing to allow rollback on errors.
+  </Accordion>
+  
+  <Accordion title="Export with Headers">
+    Always enable **Include headers** for CSV exports. It makes re-importing and analyzing the data much easier.
+  </Accordion>
+  
+  <Accordion title="Test Imports on Small Datasets">
+    Before importing 100,000 rows, test with the first 10 rows to ensure column mappings and types are correct.
+  </Accordion>
+  
+  <Accordion title="Backup Before Clear Table">
+    If using **Clear table before import**, export the existing data first as a backup in case you need to roll back.
+  </Accordion>
+</AccordionGroup>
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+V` | Paste Rows from Clipboard |
+| `Cmd+E` | Export Current View |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Import Fails with Type Errors">
+    - Check the data preview for mismatched types (e.g., text in a numeric column)
+    - Adjust column mappings to skip problematic columns
+    - Clean the source file to match the target table's schema
+  </Accordion>
+  
+  <Accordion title="CSV Delimiter Not Detected">
+    - Manually select the correct delimiter in the import dialog
+    - Ensure the CSV file uses consistent delimiters throughout
+  </Accordion>
+  
+  <Accordion title="Export File Too Large">
+    - Apply filters or a `LIMIT` clause to reduce the dataset before exporting
+    - Use pagination to export in smaller chunks
+  </Accordion>
+  
+  <Accordion title="JSON Import Shows Errors">
+    - Validate the JSON file syntax (use a JSON validator tool)
+    - Ensure the file is an array of objects: `[{...}, {...}]`
+    - Check that object keys match table column names
+  </Accordion>
+</AccordionGroup>

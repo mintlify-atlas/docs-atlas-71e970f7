@@ -1,0 +1,349 @@
+---
+title: 'Backup & Restore'
+description: 'Create database backups and restore them using native database tools'
+---
+
+Zequel provides guided wizards for backing up and restoring databases using native tools like `pg_dump`, `mysqldump`, and `mongodump`. Create full or partial backups with custom options, then restore them later.
+
+## Backup Workflow
+
+### Creating a Backup
+
+<Steps>
+  <Step title="Open Backup Wizard">
+    Click the connection context menu → **Backup Database**, or click the backup button in the sidebar.
+  </Step>
+  <Step title="Step 1: Choose Entities">
+    Select which database objects to include in the backup:
+    - **Tables**: Check individual tables or use **Select All**
+    - **Views**: Include materialized and standard views
+    - **Functions**: Stored functions and procedures
+    - **Triggers**: Table and database triggers
+  </Step>
+  <Step title="Step 2: Configure Backup">
+    Set backup options:
+    - **Output Path**: Choose where to save the backup file
+    - **Binary Path**: Path to `pg_dump`, `mysqldump`, etc. (auto-detected)
+    - **Compress**: Enable gzip compression (reduces file size)
+    - **Custom Arguments**: Advanced CLI arguments for fine control
+    - **Database-Specific Options**: Schema-only, data-only, inserts format, etc.
+  </Step>
+  <Step title="Step 3: Execute Backup">
+    Review the final command and click **Start Backup**. Progress is shown in real-time with command output.
+  </Step>
+  <Step title="Completion">
+    When complete, a success message appears with the backup file path. Click **Show in Folder** to locate the file.
+  </Step>
+</Steps>
+
+### Backup Options by Database
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    Uses `pg_dump` to create backups:
+    
+    **Options**:
+    - **Format**: Plain SQL, Custom, Directory, or Tar
+    - **Schema Only**: Dump only table structures (no data)
+    - **Data Only**: Dump only data (no CREATE TABLE statements)
+    - **Inserts**: Use `INSERT` statements instead of `COPY` (slower, more compatible)
+    - **Clean**: Add `DROP` statements before `CREATE` statements
+    - **Create**: Add `CREATE DATABASE` statement
+    - **If Exists**: Use `DROP ... IF EXISTS`
+    
+    **Default Command**:
+    ```bash
+    pg_dump -h localhost -U postgres -d mydb -F c -f backup.dump
+    ```
+  </Tab>
+  <Tab title="MySQL/MariaDB">
+    Uses `mysqldump` to create backups:
+    
+    **Options**:
+    - **Single Transaction**: Consistent snapshot for InnoDB tables
+    - **Lock Tables**: Lock all tables before dumping (ensures consistency)
+    - **No Data**: Export schema only
+    - **No Create Info**: Export data only (skip `CREATE TABLE`)
+    - **Routines**: Include stored procedures and functions
+    - **Triggers**: Include triggers
+    - **Events**: Include scheduled events
+    - **Hex Blob**: Dump binary data as hex strings
+    
+    **Default Command**:
+    ```bash
+    mysqldump -h localhost -u root -p mydb > backup.sql
+    ```
+  </Tab>
+  <Tab title="MongoDB">
+    Uses `mongodump` to create backups:
+    
+    **Options**:
+    - **Output Directory**: Directory to store BSON files
+    - **Archive**: Create a single archive file instead of multiple BSON files
+    - **Gzip**: Compress archive with gzip
+    - **Collections**: Select specific collections to dump
+    
+    **Default Command**:
+    ```bash
+    mongodump --host localhost --port 27017 --db mydb --out backup/
+    ```
+  </Tab>
+  <Tab title="SQLite">
+    Uses `.backup` command to create backups:
+    
+    **Options**:
+    - **Output Path**: Destination file path
+    
+    **Command**:
+    ```bash
+    sqlite3 mydb.db ".backup backup.db"
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Zequel auto-detects the binary path for native tools. If not found, you'll need to manually specify the path in Step 2.
+</Note>
+
+### Compression
+
+Enable **Compress** to reduce backup file size:
+
+- **PostgreSQL**: Uses custom format (`-F c`) with built-in compression
+- **MySQL**: Pipes output through `gzip`: `mysqldump ... | gzip > backup.sql.gz`
+- **MongoDB**: Uses `--gzip` flag with `mongodump`
+
+<Warning>
+  Compressed backups are faster to transfer but require decompression before restoring.
+</Warning>
+
+### Custom Arguments
+
+For advanced users, add custom CLI arguments:
+
+**Examples**:
+
+```bash
+# PostgreSQL: Dump only a specific schema
+--schema=public
+
+# MySQL: Exclude a table
+--ignore-table=mydb.logs
+
+# MongoDB: Dump with query filter
+--query='{"status": "active"}'
+```
+
+<Note>
+  Custom arguments are appended to the generated command. Refer to the official documentation for `pg_dump`, `mysqldump`, or `mongodump` for all available options.
+</Note>
+
+## Restore Workflow
+
+### Restoring a Backup
+
+<Steps>
+  <Step title="Open Restore Wizard">
+    Click the connection context menu → **Restore Database**, or click the restore button in the sidebar.
+  </Step>
+  <Step title="Step 1: Configure Restore">
+    - **Input Path**: Select the backup file to restore
+    - **Binary Path**: Path to `pg_restore`, `mysql`, `mongorestore`, etc.
+    - **Target Database**: Database to restore into (can be different from the original)
+    - **Custom Arguments**: Advanced CLI arguments
+    - **Database-Specific Options**: Clean before restore, create database, etc.
+  </Step>
+  <Step title="Step 2: Review & Execute">
+    Review the restore command and click **Start Restore**. Progress is shown with real-time output.
+  </Step>
+  <Step title="Completion">
+    When complete, a success message appears. Refresh the database tree to see restored objects.
+  </Step>
+</Steps>
+
+### Restore Options by Database
+
+<Tabs>
+  <Tab title="PostgreSQL">
+    Uses `pg_restore` (for custom/tar/directory formats) or `psql` (for plain SQL):
+    
+    **Options**:
+    - **Clean**: Drop existing objects before restoring
+    - **Create**: Create the target database before restoring
+    - **Data Only**: Restore only data (skip schema)
+    - **Schema Only**: Restore only schema (skip data)
+    - **If Exists**: Use `DROP ... IF EXISTS` for clean
+    - **Single Transaction**: Restore in a single transaction (rollback on error)
+    
+    **Command (Custom Format)**:
+    ```bash
+    pg_restore -h localhost -U postgres -d mydb -c backup.dump
+    ```
+    
+    **Command (Plain SQL)**:
+    ```bash
+    psql -h localhost -U postgres -d mydb -f backup.sql
+    ```
+  </Tab>
+  <Tab title="MySQL/MariaDB">
+    Uses `mysql` to execute SQL files:
+    
+    **Options**:
+    - **One Database**: Restore only to the specified database (ignore `USE` statements in backup)
+    
+    **Command**:
+    ```bash
+    mysql -h localhost -u root -p mydb < backup.sql
+    ```
+    
+    **Decompression** (if gzipped):
+    ```bash
+    gunzip < backup.sql.gz | mysql -h localhost -u root -p mydb
+    ```
+  </Tab>
+  <Tab title="MongoDB">
+    Uses `mongorestore` to restore BSON files:
+    
+    **Options**:
+    - **Drop**: Drop collections before restoring
+    - **Archive**: Restore from a single archive file
+    - **Gzip**: Decompress gzipped archive
+    
+    **Command**:
+    ```bash
+    mongorestore --host localhost --port 27017 --db mydb backup/mydb/
+    ```
+  </Tab>
+  <Tab title="SQLite">
+    Copy the backup file to restore:
+    
+    **Command**:
+    ```bash
+    cp backup.db mydb.db
+    ```
+    
+    Or use `.restore` command in `sqlite3` CLI.
+  </Tab>
+</Tabs>
+
+## Backup Strategies
+
+<AccordionGroup>
+  <Accordion title="Full Backup">
+    Back up all database objects (tables, views, functions, triggers) and all data. Use for complete disaster recovery.
+    
+    **When to use**:
+    - Before major schema migrations
+    - Daily/weekly automated backups
+    - Before deploying to production
+  </Accordion>
+  
+  <Accordion title="Schema-Only Backup">
+    Back up only table structures, indexes, and constraints (no data). Useful for version control.
+    
+    **When to use**:
+    - Documenting database structure
+    - Setting up development environments
+    - Tracking schema changes in Git
+  </Accordion>
+  
+  <Accordion title="Data-Only Backup">
+    Back up only data (no `CREATE TABLE` statements). Useful for seeding test databases.
+    
+    **When to use**:
+    - Populating staging/dev databases
+    - Transferring data between environments
+    - Backing up user-generated content only
+  </Accordion>
+  
+  <Accordion title="Partial Backup">
+    Back up specific tables or collections. Reduces backup size and time.
+    
+    **When to use**:
+    - Exporting specific datasets
+    - Backing up frequently changing tables
+    - Migrating individual tables to another database
+  </Accordion>
+</AccordionGroup>
+
+## Automated Backups
+
+For production databases, schedule automated backups:
+
+<Steps>
+  <Step title="Export Command">
+    Run a backup in Zequel and copy the generated command from the Execute step.
+  </Step>
+  <Step title="Create Script">
+    Save the command to a shell script (e.g., `backup.sh`).
+  </Step>
+  <Step title="Schedule with Cron">
+    Add a cron job to run the script daily:
+    ```bash
+    0 2 * * * /path/to/backup.sh
+    ```
+    This runs the backup at 2:00 AM every day.
+  </Step>
+  <Step title="Store Backups">
+    Upload backups to cloud storage (S3, Google Cloud Storage) for offsite redundancy.
+  </Step>
+</Steps>
+
+<Note>
+  Zequel's backup feature is designed for manual backups and testing. For production, use dedicated backup solutions like AWS RDS automated backups, Cron jobs, or tools like `pgBackRest` and `mydumper`.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Binary Not Found">
+    If Zequel cannot find `pg_dump`, `mysqldump`, etc.:
+    - Install the database client tools on your system
+    - Manually specify the binary path in Step 2
+    - On macOS, install via Homebrew: `brew install postgresql`, `brew install mysql`, etc.
+  </Accordion>
+  
+  <Accordion title="Permission Denied">
+    Ensure the database user has backup/restore privileges:
+    - PostgreSQL: User needs `SELECT` on all tables, `USAGE` on schemas
+    - MySQL: User needs `SELECT`, `LOCK TABLES`, `SHOW VIEW`, `TRIGGER` privileges
+    - MongoDB: User needs `backup` and `restore` roles
+  </Accordion>
+  
+  <Accordion title="Restore Fails with Errors">
+    - Check that the backup file is not corrupted
+    - Ensure the target database exists (or enable **Create** option)
+    - Review error messages in the output log for specific issues
+    - For PostgreSQL, use `--no-owner` and `--no-acl` if restoring to a different server
+  </Accordion>
+  
+  <Accordion title="Large Backups Take Too Long">
+    - Enable **Compress** to reduce file size and I/O time
+    - Use **Data Only** or **Schema Only** to skip unnecessary data
+    - For PostgreSQL, use Directory format (`-F d`) for parallel backups
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Test Restores Regularly">
+    Backups are useless if they can't be restored. Periodically test restoring to a staging database to ensure backups are valid.
+  </Accordion>
+  
+  <Accordion title="Store Backups Offsite">
+    Keep backup files on a different server or cloud storage to protect against hardware failure.
+  </Accordion>
+  
+  <Accordion title="Automate Production Backups">
+    Use Zequel for ad-hoc backups, but automate daily backups with Cron or a dedicated backup service.
+  </Accordion>
+  
+  <Accordion title="Encrypt Sensitive Backups">
+    If backups contain sensitive data, encrypt them with `gpg` or store them in encrypted cloud storage.
+  </Accordion>
+  
+  <Accordion title="Use Version Control for Schema">
+    Export schema-only backups and commit them to Git to track database changes over time.
+  </Accordion>
+</AccordionGroup>

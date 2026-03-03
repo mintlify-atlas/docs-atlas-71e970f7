@@ -1,0 +1,298 @@
+---
+title: 'Monitoring'
+description: 'Monitor active database processes, connections, and server status in real-time'
+---
+
+The Monitoring feature provides real-time visibility into database server activity. View active queries, kill long-running processes, and track connection counts and server health.
+
+## Opening the Monitor
+
+<Steps>
+  <Step title="Access Monitoring">
+    Click the connection context menu → **Monitor**, or click the monitoring button in the sidebar.
+  </Step>
+  <Step title="View Process List">
+    A table displays all active database processes (connections) with query details.
+  </Step>
+  <Step title="Enable Auto-Refresh">
+    Toggle **Auto-Refresh** to update the process list every 3 seconds.
+  </Step>
+</Steps>
+
+<Note>
+  Monitoring is available for PostgreSQL, MySQL, MariaDB, MongoDB, Redis, and SQL Server. SQLite and DuckDB are embedded databases without active processes.
+</Note>
+
+## Process List
+
+### Process Table Columns
+
+The process list displays the following information:
+
+| Column | Description |
+|--------|-------------|
+| **ID** | Process or connection ID (unique identifier) |
+| **User** | Database user running the query |
+| **Database** | Active database for the connection |
+| **Command** | Query type (SELECT, INSERT, UPDATE, etc.) |
+| **Time** | How long the query has been running (seconds) |
+| **State** | Current state (active, idle, waiting, etc.) |
+| **Query** | The SQL query being executed (truncated to 100 characters) |
+| **Actions** | Kill process button |
+
+### Color-Coded Time
+
+Query execution time is color-coded for quick identification:
+
+- **White/Default**: Less than 1 minute
+- **Amber**: 1-5 minutes (potentially slow query)
+- **Red**: Over 5 minutes (long-running query, potential issue)
+
+### Sorting Processes
+
+Click column headers to sort the process list:
+
+- **Sort by Time**: Identify long-running queries
+- **Sort by User**: Group queries by user
+- **Sort by Database**: Filter processes by database
+
+## Auto-Refresh
+
+Enable Auto-Refresh to monitor processes in real-time:
+
+<Steps>
+  <Step title="Toggle Auto-Refresh">
+    Click the Auto-Refresh toggle in the status bar (or in the monitoring toolbar).
+  </Step>
+  <Step title="Live Updates">
+    The process list reloads every 3 seconds automatically.
+  </Step>
+  <Step title="Disable">
+    Toggle Auto-Refresh off to stop automatic updates. Manually click **Refresh** to reload.
+  </Step>
+</Steps>
+
+<Note>
+  Auto-Refresh pauses when you switch to a different tab to reduce server load. It resumes when you return to the monitoring tab.
+</Note>
+
+## Server Status
+
+The status bar displays server health metrics:
+
+### PostgreSQL Metrics
+
+- **Active Connections**: Current number of client connections
+- **Max Connections**: Maximum allowed connections (from `max_connections` setting)
+- **Connection Usage**: Visual indicator (e.g., "45/100" with progress bar)
+
+### MySQL/MariaDB Metrics
+
+- **Threads Connected**: Current active connections
+- **Max Connections**: Maximum allowed connections
+- **Uptime**: Server uptime
+- **Questions**: Total queries executed since startup
+
+### MongoDB Metrics
+
+- **Current Connections**: Active client connections
+- **Available Connections**: Remaining connection slots
+- **Uptime**: Server uptime
+
+### Redis Metrics
+
+- **Connected Clients**: Active client connections
+- **Max Clients**: Maximum allowed clients
+- **Used Memory**: Current memory usage
+- **Uptime**: Server uptime
+
+<Note>
+  Server status metrics appear in the status bar at the bottom of the monitoring tab.
+</Note>
+
+## Killing Processes
+
+### Kill a Single Process
+
+<Steps>
+  <Step title="Identify Process">
+    Locate the process you want to terminate in the process list.
+  </Step>
+  <Step title="Click Kill">
+    Click the trash icon in the **Actions** column.
+  </Step>
+  <Step title="Review Details">
+    A confirmation dialog shows process ID, user, database, and the query being executed.
+  </Step>
+  <Step title="Confirm Kill">
+    Click **Kill Process** to terminate it immediately.
+  </Step>
+</Steps>
+
+<Warning>
+  Killing a process terminates the connection and rolls back any uncommitted transactions. Use with caution.
+</Warning>
+
+### Force Terminate (PostgreSQL)
+
+For PostgreSQL, choose between gentle cancellation and forced termination:
+
+<Tabs>
+  <Tab title="Cancel (Default)">
+    Uses `pg_cancel_backend()` to gracefully cancel the current query. The connection remains open.
+    
+    **Use when**: You want to stop a long-running query but keep the connection alive.
+  </Tab>
+  <Tab title="Force Terminate">
+    Uses `pg_terminate_backend()` to immediately close the entire connection and rollback all transactions.
+    
+    **Use when**: The query is unresponsive or you need to force-close the connection.
+  </Tab>
+</Tabs>
+
+Enable **Force terminate** in the kill confirmation dialog for PostgreSQL.
+
+### Common Kill Scenarios
+
+<AccordionGroup>
+  <Accordion title="Long-Running Query Blocking Others">
+    Identify the query with the highest **Time** value (red highlight). Kill it to unblock waiting processes.
+  </Accordion>
+  
+  <Accordion title="Idle Transaction Holding Locks">
+    Look for processes with state "idle in transaction" that have been running for a long time. Kill to release locks.
+  </Accordion>
+  
+  <Accordion title="Accidental Full Table Scan">
+    If you accidentally ran `SELECT * FROM huge_table` without a `LIMIT`, kill the process to stop it.
+  </Accordion>
+  
+  <Accordion title="Runaway Application Connection">
+    Identify connections from misbehaving applications (check **User** and **Database**) and kill them.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="No Processes Shown">
+    - Ensure you're connected to the database
+    - Check that the database user has permission to view processes:
+      - PostgreSQL: `SELECT pg_stat_activity` requires `pg_monitor` role
+      - MySQL: Requires `PROCESS` privilege
+      - MongoDB: Requires `inprog` command access
+  </Accordion>
+  
+  <Accordion title="Permission Denied When Killing">
+    - Ensure the database user has permission to kill processes:
+      - PostgreSQL: Can only kill your own processes unless you have `pg_signal_backend` role
+      - MySQL: Requires `SUPER` privilege to kill other users' processes
+      - MongoDB: Requires `killop` privilege
+  </Accordion>
+  
+  <Accordion title="Process List Not Refreshing">
+    - Check Auto-Refresh is enabled
+    - Verify the database connection is still active
+    - Click **Refresh** manually to test
+  </Accordion>
+  
+  <Accordion title="Query Column Truncated">
+    - Queries are truncated to 100 characters in the table
+    - Click on the row to view the full query in the right panel
+    - For very long queries, copy from the kill confirmation dialog
+  </Accordion>
+</AccordionGroup>
+
+## Privacy Mode
+
+When Privacy Mode is enabled:
+
+- **User** column is blurred
+- **Database** column is blurred
+- **Query** column is blurred
+
+This prevents exposing sensitive information when screensharing.
+
+**Enable Privacy Mode**: Click the eye icon in the status bar or press `Shift+Cmd+P`.
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+R` | Refresh process list |
+| `Shift+Cmd+P` | Toggle Privacy Mode |
+
+## Database-Specific Notes
+
+### PostgreSQL
+
+- Process list fetched from `pg_stat_activity` view
+- Can kill processes with `pg_cancel_backend()` or `pg_terminate_backend()`
+- Shows queries from all databases on the server
+
+### MySQL/MariaDB
+
+- Process list fetched from `SHOW FULL PROCESSLIST`
+- Killed with `KILL <id>` command
+- Requires `PROCESS` privilege to view all processes
+
+### MongoDB
+
+- Process list fetched from `db.currentOp()` command
+- Killed with `db.killOp()` command
+- Shows operations on the current database
+
+### Redis
+
+- Process list fetched from `CLIENT LIST` command
+- Killed with `CLIENT KILL` command
+- Shows all connected clients
+
+### SQL Server
+
+- Process list fetched from `sys.dm_exec_requests` and `sys.dm_exec_sessions` views
+- Killed with `KILL <session_id>` command
+- Requires `VIEW SERVER STATE` permission
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Diagnosing Slow Application Performance">
+    Open the Monitor to identify slow queries causing application lag. Sort by **Time** to find queries running for minutes.
+  </Accordion>
+  
+  <Accordion title="Tracking Connection Leaks">
+    Monitor active connections over time. If connections grow without being released, your application may have a connection leak.
+  </Accordion>
+  
+  <Accordion title="Emergency Query Termination">
+    If a deployed migration script is running forever, use the Monitor to kill it before it locks the database.
+  </Accordion>
+  
+  <Accordion title="Capacity Planning">
+    Check **Active Connections** vs **Max Connections** to determine if you need to increase connection limits.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Monitor During Deployments">
+    Keep the Monitor open during deployments to watch for long-running migrations or unexpected queries.
+  </Accordion>
+  
+  <Accordion title="Set Connection Alerts">
+    If active connections consistently approach max connections, consider:
+    - Increasing `max_connections`
+    - Using connection pooling (PgBouncer, ProxySQL)
+    - Investigating application connection leaks
+  </Accordion>
+  
+  <Accordion title="Document Long-Running Queries">
+    If you frequently see the same slow query, document it and optimize with indexes or query rewrites.
+  </Accordion>
+  
+  <Accordion title="Use Auto-Refresh for Live Monitoring">
+    Enable Auto-Refresh when troubleshooting live issues. Disable it during normal development to reduce server load.
+  </Accordion>
+</AccordionGroup>

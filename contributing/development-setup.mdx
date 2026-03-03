@@ -1,0 +1,360 @@
+---
+title: 'Development Setup'
+description: 'Set up your local development environment for Zequel'
+---
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    **Version 18 or higher** required for Electron compatibility
+  </Card>
+  <Card title="npm" icon="box">
+    **Version 9+** (comes with Node.js)
+  </Card>
+  <Card title="Git" icon="git">
+    For version control and contributions
+  </Card>
+  <Card title="Docker" icon="docker">
+    Optional, for running test databases
+  </Card>
+</CardGroup>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/zequel-labs/zequel.git
+    cd zequel
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+    
+    This will:
+    - Install all Node.js dependencies
+    - Run `postinstall` to set up Electron app dependencies
+    - Configure Husky Git hooks
+  </Step>
+  
+  <Step title="Verify Installation">
+    Check that everything is set up correctly:
+    
+    ```bash
+    npm run typecheck
+    npm run test:unit
+    ```
+    
+    Both commands should complete without errors.
+  </Step>
+</Steps>
+
+## Development Commands
+
+### Core Commands
+
+<CodeGroup>
+```bash Development
+npm run dev
+# Starts dev server with hot reload
+# Opens app automatically
+# DevTools available via F12 or Cmd+Option+I
+```
+
+```bash Build
+npm run build
+# Production build for all platforms
+# Output: dist/ directory
+```
+
+```bash Preview
+npm run preview
+# Preview production build before packaging
+```
+</CodeGroup>
+
+### Platform-Specific Builds
+
+<CodeGroup>
+```bash macOS
+npm run build:mac
+# Builds for macOS (Intel + Apple Silicon)
+# Creates .zip installers
+# Output: dist/zequel-apple-{arch}.zip
+```
+
+```bash Windows
+npm run build:win
+# Builds for Windows
+# Creates NSIS installer
+# Output: dist/zequel-window-{arch}.exe
+```
+
+```bash Linux
+npm run build:linux
+# Builds for Linux
+# Creates AppImage
+# Output: dist/zequel-linux-{arch}.AppImage
+```
+
+```bash Unpack (Testing)
+npm run build:unpack
+# Build without packaging
+# Faster for testing builds
+```
+</CodeGroup>
+
+### Type Checking
+
+<CodeGroup>
+```bash All
+npm run typecheck
+# Type-checks both main and renderer processes
+# Runs: typecheck:node && typecheck:web
+```
+
+```bash Main Process
+npm run typecheck:node
+# Type-checks main process and preload scripts
+# Uses tsconfig.node.json
+```
+
+```bash Renderer Process
+npm run typecheck:web
+# Type-checks Vue renderer with vue-tsc
+# Uses tsconfig.web.json
+```
+</CodeGroup>
+
+### Testing
+
+<CodeGroup>
+```bash All Tests
+npm run test
+# Runs unit + integration tests in watch mode
+# Uses Vitest
+```
+
+```bash Unit Tests
+npm run test:unit
+# Runs only unit tests
+# Required by pre-commit hook
+```
+
+```bash Integration Tests
+npm run test:integration
+# Runs tests against Docker databases
+# Requires docker-compose up -d
+```
+
+```bash E2E Tests
+npm run test:e2e
+# Runs Playwright end-to-end tests
+# Requires npm run build first
+```
+
+```bash Coverage
+npm run test:coverage
+# Generates coverage report
+# Output: coverage/ directory
+```
+
+```bash UI
+npm run test:ui
+# Opens Vitest UI for interactive testing
+```
+</CodeGroup>
+
+## Docker Development Databases
+
+Docker Compose provides test databases with seed data for all 9 supported database systems.
+
+### Starting Databases
+
+```bash
+# Start all database containers
+docker-compose up -d
+
+# Start specific database
+docker-compose up -d postgres
+docker-compose up -d mysql
+
+# View logs
+docker-compose logs -f postgres
+
+# Stop all containers
+docker-compose down
+
+# Stop and remove volumes (clean restart)
+docker-compose down -v
+```
+
+### Database Ports
+
+| Database | Port | Username | Password | Database |
+|----------|------|----------|----------|----------|
+| PostgreSQL | `54320` | `zequel` | `zequel` | `zequel` |
+| MySQL | `33061` | `zequel` | `zequel` | `zequel` |
+| MariaDB | `33070` | `zequel` | `zequel` | `zequel` |
+| MongoDB | `27018` | `zequel` | `zequel` | `zequel` |
+| Redis | `63790` | - | `zequel` | - |
+| SQL Server | `14330` | `sa` | `Zequel123!` | `master` |
+| ClickHouse | `18123` / `19000` | `default` | - | `zequel` |
+
+<Note>
+SQLite and DuckDB don't require Docker. They use bundled native libraries.
+</Note>
+
+### Seed Data
+
+Each database container includes comprehensive seed data:
+- Tables with various data types
+- Views (regular and materialized)
+- Stored procedures and functions
+- Triggers
+- Indexes and foreign keys
+- Sequences (PostgreSQL)
+- Extensions (PostgreSQL)
+- Events (MySQL/MariaDB)
+- Users and roles
+
+Integration tests in `src/tests/integration/` verify this seed data.
+
+### SQLite Special Case
+
+SQLite uses a pre-built database file at `docker/sqlite/zequel.db`. If you modify `docker/sqlite/init.sql`, regenerate it:
+
+```bash
+rm docker/sqlite/zequel.db
+sqlite3 docker/sqlite/zequel.db < docker/sqlite/init.sql
+```
+
+## Documentation
+
+Zequel's documentation (this site) is built with VitePress:
+
+```bash
+# Start docs dev server
+npm run docs:dev
+# Opens at http://localhost:5173
+
+# Build docs for production
+npm run docs:build
+
+# Preview built docs
+npm run docs:preview
+```
+
+## IDE Setup
+
+### VS Code (Recommended)
+
+**Recommended Extensions**:
+- **Volar** - Vue 3 language support
+- **TypeScript Vue Plugin** - TypeScript in `.vue` files
+- **Tailwind CSS IntelliSense** - Class autocomplete
+- **ESLint** (optional) - Linting support
+
+**Settings** (`.vscode/settings.json`):
+```json
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+  "editor.formatOnSave": false
+}
+```
+
+### WebStorm
+
+- Enable Vue.js plugin
+- Enable TypeScript language service
+- Configure Tailwind CSS support
+- Set Node interpreter to project's Node version
+
+## Troubleshooting
+
+### Build Errors
+
+<AccordionGroup>
+  <Accordion title="Native module build failures">
+    Some dependencies (better-sqlite3, @duckdb/node-api, keytar) require native compilation.
+    
+    **Solution**: Ensure you have build tools installed:
+    - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+    - **Windows**: Visual Studio Build Tools
+    - **Linux**: `build-essential` package
+    
+    Then run:
+    ```bash
+    npm run postinstall
+    ```
+  </Accordion>
+  
+  <Accordion title="Type checking fails">
+    If `npm run typecheck` fails after pulling changes:
+    
+    ```bash
+    rm -rf node_modules
+    npm install
+    ```
+  </Accordion>
+  
+  <Accordion title="Docker containers won't start">
+    Check if ports are already in use:
+    
+    ```bash
+    lsof -i :54320  # PostgreSQL
+    lsof -i :33061  # MySQL
+    ```
+    
+    Stop conflicting services or change ports in `docker-compose.yml`.
+  </Accordion>
+  
+  <Accordion title="E2E tests fail">
+    E2E tests require a production build first:
+    
+    ```bash
+    npm run build
+    npm run test:e2e
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Common Issues
+
+**App won't start in dev mode**:
+- Check that port 5173 (Vite dev server) isn't in use
+- Clear Electron cache: `rm -rf ~/.config/Electron`
+
+**Hot reload not working**:
+- Ensure you're using `npm run dev`, not `npm run build`
+- Check console for Vite HMR errors
+
+**Git hooks not running**:
+- Husky may not be installed. Run:
+  ```bash
+  npm run prepare
+  ```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/contributing/project-structure">
+    Explore the codebase organization
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/contributing/architecture">
+    Learn Electron process architecture
+  </Card>
+  <Card title="Testing" icon="flask" href="/contributing/testing">
+    Write and run tests
+  </Card>
+  <Card title="Database Adapters" icon="database" href="/contributing/database-adapters">
+    Add support for new databases
+  </Card>
+</CardGroup>

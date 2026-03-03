@@ -1,0 +1,430 @@
+---
+title: 'SQL Server'
+description: 'Connect to and manage Microsoft SQL Server databases'
+icon: 'database'
+---
+
+## Overview
+
+Microsoft SQL Server is an enterprise relational database management system. Zequel provides full support for SQL Server through the official `mssql` driver (v12.2.0).
+
+## Supported Versions
+
+- SQL Server 2016+
+- SQL Server 2017+
+- SQL Server 2019+
+- SQL Server 2022+
+- Azure SQL Database
+- Azure SQL Managed Instance
+
+## Connection
+
+### Basic Connection
+
+```
+Host: localhost
+Port: 1433
+Database: master
+Username: sa
+Password: your_password
+```
+
+### Named Instances
+
+For SQL Server named instances, use the format:
+
+```
+Host: localhost\SQLEXPRESS
+```
+
+Zequel automatically handles named instance connections and uses SQL Browser to determine the port.
+
+### Connection Encryption
+
+SQL Server supports encrypted connections:
+
+```javascript
+{
+  host: 'localhost',
+  port: 1433,
+  ssl: true,  // Enable encryption
+  trustServerCertificate: false  // Verify certificate
+}
+```
+
+<Note>
+SQL Server 2022+ requires encryption by default. Set `trustServerCertificate: true` for self-signed certificates during development.
+</Note>
+
+### Azure SQL Database
+
+Connect to Azure SQL:
+
+```
+Host: your-server.database.windows.net
+Port: 1433
+Database: your-database
+Username: your-username@your-server
+Password: your-password
+SSL: Enabled
+```
+
+## Features
+
+### Databases & Schemas
+
+- Create and drop databases
+- Multiple schemas per database (default: `dbo`)
+- Switch between schemas
+- System databases: `master`, `tempdb`, `model`, `msdb`
+
+### Tables & Views
+
+- Full DDL support with CREATE, ALTER, DROP
+- Table and column comments (via extended properties)
+- Computed columns
+- Identity columns (auto-increment)
+
+### Data Types
+
+SQL Server provides extensive data types:
+
+<Tabs>
+  <Tab title="Numeric">
+    - TINYINT, SMALLINT, INT, BIGINT
+    - DECIMAL, NUMERIC (precision/scale)
+    - FLOAT, REAL
+    - MONEY, SMALLMONEY
+    - BIT
+  </Tab>
+  <Tab title="String">
+    - CHAR(n), VARCHAR(n), VARCHAR(MAX)
+    - NCHAR(n), NVARCHAR(n), NVARCHAR(MAX)
+    - TEXT, NTEXT (deprecated)
+  </Tab>
+  <Tab title="Binary">
+    - BINARY(n), VARBINARY(n), VARBINARY(MAX)
+    - IMAGE (deprecated)
+  </Tab>
+  <Tab title="Date/Time">
+    - DATE
+    - TIME
+    - DATETIME, DATETIME2
+    - SMALLDATETIME
+    - DATETIMEOFFSET (timezone-aware)
+  </Tab>
+  <Tab title="Other">
+    - UNIQUEIDENTIFIER (GUID)
+    - XML
+    - JSON (stored as NVARCHAR)
+    - GEOGRAPHY, GEOMETRY (spatial)
+    - HIERARCHYID
+  </Tab>
+</Tabs>
+
+### Indexes
+
+- **CLUSTERED**: Physical row order (one per table)
+- **NONCLUSTERED**: Separate index structure (up to 999 per table)
+- **UNIQUE**: Enforce uniqueness
+- **FILTERED**: Partial index with WHERE clause
+- **COLUMNSTORE**: Columnar storage for analytics
+- **FULLTEXT**: Full-text search
+
+```sql
+CREATE CLUSTERED INDEX idx_id ON users(id);
+CREATE NONCLUSTERED INDEX idx_email ON users(email);
+CREATE UNIQUE INDEX idx_username ON users(username);
+```
+
+### Constraints
+
+- Primary keys (clustered or nonclustered)
+- Foreign keys with ON UPDATE/ON DELETE actions
+- Unique constraints
+- Check constraints
+- Default constraints
+
+### Identity Columns
+
+Auto-incrementing columns:
+
+```sql
+CREATE TABLE users (
+  id INT IDENTITY(1,1) PRIMARY KEY,  -- Start at 1, increment by 1
+  name NVARCHAR(100) NOT NULL
+);
+
+-- Insert without specifying id
+INSERT INTO users (name) VALUES ('Alice');
+
+-- Reseed identity
+DBCC CHECKIDENT ('users', RESEED, 1000);
+```
+
+### Stored Procedures
+
+Create and execute procedures:
+
+```sql
+CREATE PROCEDURE GetUser
+  @UserId INT
+AS
+BEGIN
+  SELECT * FROM users WHERE id = @UserId;
+END;
+
+-- Execute
+EXEC GetUser @UserId = 1;
+```
+
+### Functions
+
+User-defined functions:
+
+```sql
+-- Scalar function
+CREATE FUNCTION dbo.GetFullName(
+  @FirstName NVARCHAR(50),
+  @LastName NVARCHAR(50)
+)
+RETURNS NVARCHAR(101)
+AS
+BEGIN
+  RETURN @FirstName + ' ' + @LastName;
+END;
+
+-- Table-valued function
+CREATE FUNCTION dbo.GetUsersByStatus(@Status NVARCHAR(20))
+RETURNS TABLE
+AS
+RETURN (
+  SELECT * FROM users WHERE status = @Status
+);
+```
+
+### Triggers
+
+- **AFTER**: Execute after operation completes
+- **INSTEAD OF**: Replace the operation
+- Events: INSERT, UPDATE, DELETE
+- Access to `inserted` and `deleted` special tables
+
+```sql
+CREATE TRIGGER trg_UpdateTimestamp
+ON users
+AFTER UPDATE
+AS
+BEGIN
+  UPDATE users
+  SET updated_at = GETDATE()
+  FROM users u
+  INNER JOIN inserted i ON u.id = i.id;
+END;
+```
+
+### Users & Security
+
+- Server-level logins
+- Database-level users
+- Roles and permissions
+- Password policies
+
+```sql
+-- Create login and user
+CREATE LOGIN myuser WITH PASSWORD = 'SecurePassword123!';
+CREATE USER myuser FOR LOGIN myuser;
+
+-- Grant permissions
+GRANT SELECT, INSERT ON users TO myuser;
+```
+
+## SQL Server-Specific Features
+
+### Extended Properties
+
+Add comments to database objects:
+
+```sql
+-- Add table comment
+EXEC sp_addextendedproperty 
+  @name = N'MS_Description',
+  @value = N'Stores user information',
+  @level0type = N'SCHEMA', @level0name = 'dbo',
+  @level1type = N'TABLE', @level1name = 'users';
+
+-- Add column comment
+EXEC sp_addextendedproperty 
+  @name = N'MS_Description',
+  @value = N'User email address',
+  @level0type = N'SCHEMA', @level0name = 'dbo',
+  @level1type = N'TABLE', @level1name = 'users',
+  @level2type = N'COLUMN', @level2name = 'email';
+```
+
+Zequel automatically manages extended properties for table and column comments.
+
+### Common Table Expressions (CTE)
+
+```sql
+WITH UserStats AS (
+  SELECT 
+    user_id,
+    COUNT(*) as order_count,
+    SUM(total) as total_spent
+  FROM orders
+  GROUP BY user_id
+)
+SELECT 
+  u.name,
+  s.order_count,
+  s.total_spent
+FROM users u
+JOIN UserStats s ON u.id = s.user_id;
+```
+
+### Window Functions
+
+```sql
+SELECT 
+  name,
+  salary,
+  AVG(salary) OVER (PARTITION BY department) as dept_avg,
+  ROW_NUMBER() OVER (ORDER BY salary DESC) as salary_rank
+FROM employees;
+```
+
+### JSON Support
+
+Query and manipulate JSON data:
+
+```sql
+-- Parse JSON
+SELECT 
+  JSON_VALUE(data, '$.name') as name,
+  JSON_VALUE(data, '$.age') as age
+FROM users;
+
+-- Convert to JSON
+SELECT 
+  id, 
+  name, 
+  email
+FROM users
+FOR JSON PATH;
+```
+
+### Temporal Tables (2016+)
+
+System-versioned tables for historical data:
+
+```sql
+CREATE TABLE employees (
+  id INT PRIMARY KEY,
+  name NVARCHAR(100),
+  salary DECIMAL(10,2),
+  SysStartTime DATETIME2 GENERATED ALWAYS AS ROW START,
+  SysEndTime DATETIME2 GENERATED ALWAYS AS ROW END,
+  PERIOD FOR SYSTEM_TIME (SysStartTime, SysEndTime)
+)
+WITH (SYSTEM_VERSIONING = ON);
+
+-- Query historical data
+SELECT * FROM employees FOR SYSTEM_TIME AS OF '2024-01-01';
+```
+
+### Full-Text Search
+
+```sql
+-- Create full-text catalog and index
+CREATE FULLTEXT CATALOG ft_catalog;
+CREATE FULLTEXT INDEX ON articles(title, content) KEY INDEX PK_articles;
+
+-- Search
+SELECT * FROM articles WHERE CONTAINS(content, 'database AND performance');
+```
+
+## Advanced Features
+
+### Transactions
+
+Full ACID transaction support:
+
+```sql
+BEGIN TRANSACTION;
+BEGIN TRY
+  UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+  UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+  COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+  ROLLBACK TRANSACTION;
+  THROW;
+END CATCH;
+```
+
+### Query Cancellation
+
+Zequel can cancel running queries using the `mssql` driver's request cancellation.
+
+### Execution Plans
+
+```sql
+SET SHOWPLAN_XML ON;
+GO
+SELECT * FROM users WHERE email = 'test@example.com';
+GO
+SET SHOWPLAN_XML OFF;
+```
+
+## Limitations
+
+<Warning>
+- Column and table renaming requires `sp_rename` stored procedure
+- Dropping columns with default constraints requires dropping the constraint first (Zequel handles this automatically)
+- Identity columns cannot be modified directly
+</Warning>
+
+## Docker Development
+
+Zequel includes SQL Server in Docker Compose:
+
+```yaml
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: YourStrong@Password
+      MSSQL_PID: Developer
+    volumes:
+      - ./docker/sqlserver/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+The seed database includes:
+- Tables with various data types
+- Schemas (dbo, sales, hr)
+- Views and stored procedures
+- Functions and triggers
+- Indexes and constraints
+- Extended properties (comments)
+
+## Best Practices
+
+1. **Use NVARCHAR** for Unicode support instead of VARCHAR
+2. **Use schemas** to organize database objects
+3. **Enable encryption** for production connections
+4. **Use parameterized queries** to prevent SQL injection
+5. **Create clustered indexes** on primary keys
+6. **Monitor query performance** with execution plans
+7. **Use transactions** for multi-statement operations
+8. **Set appropriate timeouts** for long-running queries
+
+## Additional Resources
+
+- [SQL Server Documentation](https://learn.microsoft.com/en-us/sql/sql-server/)
+- [T-SQL Reference](https://learn.microsoft.com/en-us/sql/t-sql/)
+- [Azure SQL Database](https://learn.microsoft.com/en-us/azure/azure-sql/)
+- [Performance Tuning](https://learn.microsoft.com/en-us/sql/relational-databases/performance/)

@@ -1,0 +1,495 @@
+---
+title: 'Database Adapters'
+description: 'Learn how to add support for new database systems'
+---
+
+Zequel supports 9 database systems through a **driver architecture**. Each database has a dedicated adapter that implements the `DatabaseDriver` interface.
+
+## Architecture Overview
+
+All database drivers extend or implement the `DatabaseDriver` interface defined in `src/main/db/base.ts`:
+
+```typescript
+export interface DatabaseDriver {
+  readonly type: DatabaseType;
+  readonly isConnected: boolean;
+  
+  // Connection lifecycle
+  connect(config: ConnectionConfig): Promise<void>;
+  disconnect(): Promise<void>;
+  testConnection(config: ConnectionConfig): Promise<TestConnectionResult>;
+  
+  // Query execution
+  execute(sql: string, params?: unknown[], useTransaction?: boolean): Promise<QueryResult>;
+  
+  // Schema introspection
+  getDatabases(): Promise<Database[]>;
+  getTables(database: string, schema?: string): Promise<Table[]>;
+  getColumns(table: string): Promise<Column[]>;
+  getIndexes(table: string): Promise<Index[]>;
+  getForeignKeys(table: string): Promise<ForeignKey[]>;
+  getTableDDL(table: string): Promise<string>;
+  getTableData(table: string, options: DataOptions): Promise<DataResult>;
+  
+  // Schema editing operations
+  addColumn(request: AddColumnRequest): Promise<SchemaOperationResult>;
+  modifyColumn(request: ModifyColumnRequest): Promise<SchemaOperationResult>;
+  dropColumn(request: DropColumnRequest): Promise<SchemaOperationResult>;
+  renameColumn(request: RenameColumnRequest): Promise<SchemaOperationResult>;
+  
+  createIndex(request: CreateIndexRequest): Promise<SchemaOperationResult>;
+  dropIndex(request: DropIndexRequest): Promise<SchemaOperationResult>;
+  
+  addForeignKey(request: AddForeignKeyRequest): Promise<SchemaOperationResult>;
+  dropForeignKey(request: DropForeignKeyRequest): Promise<SchemaOperationResult>;
+  
+  createTable(request: CreateTableRequest): Promise<SchemaOperationResult>;
+  dropTable(request: DropTableRequest): Promise<SchemaOperationResult>;
+  renameTable(request: RenameTableRequest): Promise<SchemaOperationResult>;
+  
+  // Row operations
+  insertRow(request: InsertRowRequest): Promise<SchemaOperationResult>;
+  deleteRow(request: DeleteRowRequest): Promise<SchemaOperationResult>;
+  updateRow(request: UpdateRowRequest): Promise<SchemaOperationResult>;
+  
+  // View operations
+  createView(request: CreateViewRequest): Promise<SchemaOperationResult>;
+  dropView(request: DropViewRequest): Promise<SchemaOperationResult>;
+  renameView(request: RenameViewRequest): Promise<SchemaOperationResult>;
+  getViewDDL(viewName: string): Promise<string>;
+  
+  // Routines (stored procedures/functions)
+  getRoutines(type?: RoutineType): Promise<Routine[]>;
+  getRoutineDefinition(name: string, type: RoutineType): Promise<string>;
+  
+  // Triggers
+  getTriggers(table?: string): Promise<Trigger[]>;
+  getTriggerDefinition(name: string, table?: string): Promise<string>;
+  createTrigger(request: CreateTriggerRequest): Promise<SchemaOperationResult>;
+  dropTrigger(request: DropTriggerRequest): Promise<SchemaOperationResult>;
+  
+  // User management
+  getUsers(): Promise<DatabaseUser[]>;
+  createUser(request: CreateUserRequest): Promise<SchemaOperationResult>;
+  dropUser(request: DropUserRequest): Promise<SchemaOperationResult>;
+  
+  // Cursor support (streaming)
+  createCursor(sql: string, chunkSize: number): Promise<string>;
+  createTableCursor(table: string, options: DataOptions, chunkSize: number): Promise<string>;
+  
+  // Data types
+  getDataTypes(): DataTypeInfo[];
+}
+```
+
+## Existing Drivers
+
+| Database | Driver File | Client Library | Query Builder |
+|----------|-------------|----------------|---------------|
+| PostgreSQL | `postgres.ts` | `pg` + `pg-cursor` | Knex |
+| MySQL | `mysql.ts` | `mysql2` | Knex |
+| MariaDB | `mariadb.ts` | `mysql2` (extends MySQL) | Knex |
+| SQLite | `sqlite.ts` | `better-sqlite3` | Knex |
+| DuckDB | `duckdb.ts` | `@duckdb/node-api` | Knex (custom dialect) |
+| MongoDB | `mongodb.ts` | `mongodb` | None (native driver) |
+| Redis | `redis.ts` | `ioredis` | None (key-value) |
+| ClickHouse | `clickhouse.ts` | `@clickhouse/client` | None (custom SQL) |
+| SQL Server | `sqlserver.ts` | `mssql` | Knex |
+
+## Adding a New Database
+
+<Steps>
+  <Step title="Add Database Type Enum">
+    Add your database to the `DatabaseType` enum in `src/main/types/index.ts`:
+    
+    ```typescript
+    export enum DatabaseType {
+      PostgreSQL = 'postgresql',
+      MySQL = 'mysql',
+      MariaDB = 'mariadb',
+      SQLite = 'sqlite',
+      DuckDB = 'duckdb',
+      MongoDB = 'mongodb',
+      Redis = 'redis',
+      ClickHouse = 'clickhouse',
+      SQLServer = 'sqlserver',
+      CockroachDB = 'cockroachdb',  // New!
+    }
+    ```
+  </Step>
+  
+  <Step title="Install Client Library">
+    Add the Node.js client for your database:
+    
+    ```bash
+    npm install pg-cockroachdb @types/pg-cockroachdb
+    ```
+  </Step>
+  
+  <Step title="Create Driver Class">
+    Create `src/main/db/cockroachdb.ts`:
+    
+    ```typescript
+    import type { Knex } from 'knex';
+    import knex from 'knex';
+    import { DatabaseType } from '@main/types';
+    import type { ConnectionConfig, QueryResult } from '@main/types';
+    import type { DatabaseDriver } from './base';
+    
+    export class CockroachDBDriver implements DatabaseDriver {
+      readonly type = DatabaseType.CockroachDB;
+      private db: Knex | null = null;
+      
+      get isConnected(): boolean {
+        return this.db !== null;
+      }
+      
+      async connect(config: ConnectionConfig): Promise<void> {
+        this.db = knex({
+          client: 'cockroachdb',
+          connection: {
+            host: config.host,
+            port: config.port,
+            database: config.database,
+            user: config.username,
+            password: config.password,
+            ssl: config.ssl ? { rejectUnauthorized: false } : false,
+          },
+        });
+        
+        // Test connection
+        await this.db.raw('SELECT 1');
+      }
+      
+      async disconnect(): Promise<void> {
+        if (this.db) {
+          await this.db.destroy();
+          this.db = null;
+        }
+      }
+      
+      async execute(sql: string, params?: unknown[]): Promise<QueryResult> {
+        if (!this.db) throw new Error('Not connected');
+        
+        const start = Date.now();
+        const result = await this.db.raw(sql, params);
+        const executionTime = Date.now() - start;
+        
+        return {
+          rows: result.rows,
+          rowCount: result.rowCount,
+          fields: result.fields?.map(f => ({
+            name: f.name,
+            type: f.dataTypeID,
+          })),
+          executionTime,
+        };
+      }
+      
+      async getDatabases(): Promise<Database[]> {
+        if (!this.db) throw new Error('Not connected');
+        
+        const result = await this.db.raw(`
+          SELECT datname as name 
+          FROM pg_database 
+          WHERE datistemplate = false
+        `);
+        
+        return result.rows.map(row => ({ name: row.name }));
+      }
+      
+      async getTables(database: string, schema = 'public'): Promise<Table[]> {
+        if (!this.db) throw new Error('Not connected');
+        
+        const result = await this.db.raw(`
+          SELECT tablename as name 
+          FROM pg_tables 
+          WHERE schemaname = ?
+        `, [schema]);
+        
+        return result.rows.map(row => ({ name: row.name }));
+      }
+      
+      // Implement remaining methods...
+      // See src/main/db/postgres.ts for reference
+    }
+    ```
+  </Step>
+  
+  <Step title="Add to Connection Manager">
+    Register your driver in `src/main/db/manager.ts`:
+    
+    ```typescript
+    import { CockroachDBDriver } from './cockroachdb';
+    
+    private createDriver(type: DatabaseType): DatabaseDriver {
+      switch (type) {
+        case DatabaseType.PostgreSQL:
+          return new PostgresDriver();
+        case DatabaseType.CockroachDB:
+          return new CockroachDBDriver();
+        // ...
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Add Cursor Support">
+    Create a cursor class in `src/main/db/cursors/CockroachDBCursor.ts`:
+    
+    ```typescript
+    import { BaseCursor } from './BaseCursor';
+    import type { Knex } from 'knex';
+    
+    export class CockroachDBCursor extends BaseCursor {
+      private cursor: any;
+      
+      constructor(
+        private db: Knex,
+        private sql: string,
+        chunkSize: number
+      ) {
+        super(chunkSize);
+      }
+      
+      async read(): Promise<StreamResult> {
+        // Implement cursor logic
+        // See PostgresCursor.ts for reference
+      }
+      
+      async cancel(): Promise<void> {
+        // Cleanup resources
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Add UI Assets">
+    Add a database logo to `src/renderer/assets/images/cockroachdb.svg`.
+  </Step>
+  
+  <Step title="Update Connection Form">
+    Add CockroachDB to the database type selector in `src/renderer/components/connection/DatabaseTypeCombobox.vue`:
+    
+    ```vue
+    const databases = [
+      { value: DatabaseType.PostgreSQL, label: 'PostgreSQL', icon: 'postgresql.svg' },
+      { value: DatabaseType.CockroachDB, label: 'CockroachDB', icon: 'cockroachdb.svg' },
+      // ...
+    ];
+    ```
+  </Step>
+  
+  <Step title="Add Docker Test Container">
+    Add to `docker-compose.yml`:
+    
+    ```yaml
+    cockroachdb:
+      image: cockroachdb/cockroach:latest
+      command: start-single-node --insecure
+      ports:
+        - "26257:26257"
+      volumes:
+        - cockroachdb_data:/cockroach/cockroach-data
+        - ./docker/cockroachdb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    
+    volumes:
+      cockroachdb_data:
+    ```
+    
+    Create `docker/cockroachdb/init.sql` with seed data.
+  </Step>
+  
+  <Step title="Write Tests">
+    Create unit tests (`src/tests/unit/main/cockroachdb.test.ts`) and integration tests (`src/tests/integration/main/cockroachdb-seed.test.ts`).
+  </Step>
+</Steps>
+
+## Database-Specific Features
+
+Some databases have unique features that require custom implementations.
+
+### PostgreSQL-Specific
+
+- **Schemas**: `getSchemas()`, `setCurrentSchema()`, `createSchema()`
+- **Sequences**: `getSequences()`, `createSequence()`, `alterSequence()`
+- **Materialized Views**: `getMaterializedViews()`, `refreshMaterializedView()`
+- **Extensions**: `getExtensions()`, `createExtension()`
+- **Enums**: `getEnums()`, `getAllEnums()`
+- **Encodings**: `getPgEncodings()`, `getPgCollations()`
+
+### MySQL/MariaDB-Specific
+
+- **Charsets**: `getCharsets()`, `getCollations()`, `setTableCharset()`
+- **Partitions**: `getPartitions()`, `createPartition()`, `dropPartition()`
+- **Events**: `getEvents()`, `createEvent()`, `alterEvent()`
+
+### MongoDB-Specific (NoSQL)
+
+MongoDB doesn't use the Knex query builder. The driver implements collection operations:
+
+- `getCollections()` instead of `getTables()`
+- `getDocuments()` instead of `getTableData()`
+- `insertDocument()`, `updateDocument()`, `deleteDocument()`
+
+### Redis-Specific (Key-Value)
+
+Redis has a completely different API:
+
+- `getKeys(pattern)` - List keys matching pattern
+- `getValue(key)` - Get value for key
+- `setValue(key, value, ttl)` - Set key with optional TTL
+- `deleteKey(key)` - Delete key
+- `getKeyInfo(key)` - Get type, TTL, memory usage
+
+## Query Builder: Knex vs. Raw SQL
+
+**Use Knex** for SQL databases (PostgreSQL, MySQL, SQLite, etc.):
+- Type-safe query building
+- Automatic parameterization
+- Schema introspection helpers
+- Migration support
+
+**Use raw SQL** for:
+- Database-specific syntax (window functions, CTEs)
+- NoSQL databases (MongoDB, Redis)
+- Databases without Knex support
+
+**Example** (Knex vs. Raw):
+
+<CodeGroup>
+```typescript Knex
+const tables = await this.db('information_schema.tables')
+  .select('table_name as name')
+  .where('table_schema', schema)
+  .orderBy('table_name');
+```
+
+```typescript Raw SQL
+const result = await this.db.raw(`
+  SELECT table_name as name
+  FROM information_schema.tables
+  WHERE table_schema = ?
+  ORDER BY table_name
+`, [schema]);
+const tables = result.rows;
+```
+</CodeGroup>
+
+## Testing Your Driver
+
+### Unit Tests
+
+Mock the client library:
+
+```typescript
+// src/tests/unit/main/cockroachdb.test.ts
+import { describe, it, expect, vi } from 'vitest';
+import { CockroachDBDriver } from '@main/db/cockroachdb';
+
+vi.mock('knex', () => ({
+  default: vi.fn(() => ({
+    raw: vi.fn(() => ({ rows: [] })),
+    destroy: vi.fn(),
+  })),
+}));
+
+describe('CockroachDBDriver', () => {
+  it('should connect successfully', async () => {
+    const driver = new CockroachDBDriver();
+    await expect(driver.connect(config)).resolves.not.toThrow();
+    expect(driver.isConnected).toBe(true);
+  });
+});
+```
+
+### Integration Tests
+
+Test against the Docker container:
+
+```typescript
+// src/tests/integration/main/cockroachdb-seed.test.ts
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { CockroachDBDriver } from '@main/db/cockroachdb';
+
+describe('CockroachDB integration', () => {
+  let driver: CockroachDBDriver;
+  
+  beforeAll(async () => {
+    driver = new CockroachDBDriver();
+    try {
+      await driver.connect({
+        host: 'localhost',
+        port: 26257,
+        database: 'defaultdb',
+        username: 'root',
+      });
+    } catch (err) {
+      console.warn('CockroachDB container not available');
+    }
+  });
+  
+  afterAll(async () => {
+    if (driver?.isConnected) await driver.disconnect();
+  });
+  
+  it('should fetch databases', async () => {
+    if (!driver?.isConnected) return;
+    const databases = await driver.getDatabases();
+    expect(databases.length).toBeGreaterThan(0);
+  });
+});
+```
+
+## Common Pitfalls
+
+<Warning>
+**Connection Leaks**: Always implement `disconnect()` properly and call `db.destroy()` or equivalent.
+</Warning>
+
+<Warning>
+**BigInt Serialization**: Use `serialize()` from `@main/utils/serialize` to convert BigInt to strings before sending to renderer.
+</Warning>
+
+<Warning>
+**SQL Injection**: Always use parameterized queries. Never concatenate user input into SQL strings.
+</Warning>
+
+<Warning>
+**Schema vs. Database**: PostgreSQL uses schemas within databases. MySQL/MariaDB use databases (schemas are aliases). Handle this carefully.
+</Warning>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL Driver" icon="file-code" href="https://github.com/zequel-labs/zequel/blob/main/src/main/db/postgres.ts">
+    Reference implementation (most complete)
+  </Card>
+  <Card title="MongoDB Driver" icon="file-code" href="https://github.com/zequel-labs/zequel/blob/main/src/main/db/mongodb.ts">
+    Example of NoSQL driver
+  </Card>
+  <Card title="Knex Documentation" icon="book" href="https://knexjs.org">
+    Query builder reference
+  </Card>
+  <Card title="Electron IPC" icon="book" href="https://www.electronjs.org/docs/latest/tutorial/ipc">
+    Inter-process communication guide
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+After implementing your driver:
+
+1. **Test thoroughly** with unit, integration, and E2E tests
+2. **Add documentation** for connection setup
+3. **Create seed data** for integration tests
+4. **Submit a PR** with clear description and screenshots
+
+<CardGroup cols={2}>
+  <Card title="Testing Guide" icon="flask" href="/contributing/testing">
+    Learn how to write comprehensive tests
+  </Card>
+  <Card title="Contributing Overview" icon="code-pull-request" href="/contributing/overview">
+    Submit your contribution
+  </Card>
+</CardGroup>

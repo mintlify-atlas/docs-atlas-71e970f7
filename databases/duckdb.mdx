@@ -1,0 +1,368 @@
+---
+title: 'DuckDB'
+description: 'Connect to and manage DuckDB databases'
+icon: 'hard-drive'
+---
+
+## Overview
+
+DuckDB is an embedded analytical database designed for OLAP (Online Analytical Processing) workloads. Often called "SQLite for analytics," it excels at complex queries on large datasets. Zequel supports DuckDB through the official `@duckdb/node-api` driver (v1.4.4-r.1).
+
+## Supported Versions
+
+- DuckDB 0.9+
+- DuckDB 0.10+
+- DuckDB 1.0+
+- DuckDB 1.1+
+- DuckDB 1.2+
+
+## Connection
+
+### File-Based Connection
+
+DuckDB databases are single files:
+
+```
+File Path: /path/to/database.duckdb
+```
+
+Common file extensions:
+- `.duckdb`
+- `.ddb`
+- `.db`
+
+### In-Memory Databases
+
+Create temporary analytical databases:
+
+```
+File Path: :memory:
+```
+
+<Note>
+DuckDB's in-memory mode is optimized for analytical queries and can handle larger datasets than SQLite's in-memory mode.
+</Note>
+
+## Features
+
+### Tables & Views
+
+- Create, drop, and rename tables
+- Create and drop views (including CREATE OR REPLACE)
+- View table metadata and statistics
+
+### Data Types
+
+DuckDB supports rich analytical data types:
+
+<Tabs>
+  <Tab title="Numeric">
+    - TINYINT, SMALLINT, INTEGER, BIGINT
+    - HUGEINT (128-bit integers)
+    - UTINYINT, USMALLINT, UINTEGER, UBIGINT (unsigned)
+    - FLOAT, DOUBLE
+    - DECIMAL(precision, scale)
+  </Tab>
+  <Tab title="String">
+    - VARCHAR (unlimited length)
+    - TEXT (alias for VARCHAR)
+  </Tab>
+  <Tab title="Date/Time">
+    - DATE
+    - TIME
+    - TIMESTAMP
+    - INTERVAL
+  </Tab>
+  <Tab title="Complex Types">
+    - **ARRAY**: LIST of values
+    - **STRUCT**: Named fields (like JSON object)
+    - **MAP**: Key-value pairs
+    - **UNION**: Tagged union types
+    - **JSON**: Native JSON support
+  </Tab>
+  <Tab title="Other">
+    - BOOLEAN
+    - BLOB (binary data)
+    - UUID
+  </Tab>
+</Tabs>
+
+### Indexes
+
+- CREATE INDEX support
+- Automatic index selection
+- ART (Adaptive Radix Tree) indexes
+
+<Note>
+DuckDB automatically creates and uses indexes for optimal query performance. Manual index creation is often unnecessary.
+</Note>
+
+### Constraints
+
+- Primary keys
+- Foreign keys (enforced)
+- Unique constraints
+- NOT NULL constraints
+- CHECK constraints
+
+```sql
+CREATE TABLE orders (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  total DECIMAL(10,2) CHECK(total >= 0),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+### Transactions
+
+Full ACID transaction support:
+
+```sql
+BEGIN TRANSACTION;
+INSERT INTO sales VALUES (1, 100.00);
+INSERT INTO inventory VALUES (1, -1);
+COMMIT;
+```
+
+## DuckDB-Specific Features
+
+### Analytical Functions
+
+DuckDB excels at analytical SQL:
+
+```sql
+-- Window functions
+SELECT 
+  customer_id,
+  order_date,
+  amount,
+  SUM(amount) OVER (PARTITION BY customer_id ORDER BY order_date) as running_total
+FROM orders;
+
+-- Advanced aggregations
+SELECT 
+  category,
+  MEDIAN(price) as median_price,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY price) as p95_price
+FROM products
+GROUP BY category;
+```
+
+### Complex Type Support
+
+Query nested and complex data:
+
+```sql
+-- Lists/Arrays
+SELECT [1, 2, 3] as numbers;
+SELECT unnest([1, 2, 3]) as number;
+
+-- Structs
+SELECT {'name': 'Alice', 'age': 30} as person;
+SELECT person.name FROM people;
+
+-- Maps
+SELECT MAP(['key1', 'key2'], [10, 20]) as my_map;
+```
+
+### File Format Support
+
+DuckDB can query many file formats directly:
+
+```sql
+-- CSV
+SELECT * FROM read_csv_auto('data.csv');
+
+-- Parquet
+SELECT * FROM read_parquet('data.parquet');
+
+-- JSON
+SELECT * FROM read_json_auto('data.json');
+
+-- Excel (with extension)
+INSTALL spatial;
+LOAD spatial;
+SELECT * FROM st_read('data.xlsx');
+```
+
+### Extensions
+
+DuckDB supports extensions for additional functionality:
+
+```sql
+-- Install extensions
+INSTALL httpfs;     -- Read from HTTP/S3
+INSTALL parquet;    -- Parquet support (built-in)
+INSTALL json;       -- JSON support (built-in)
+INSTALL icu;        -- International Components for Unicode
+INSTALL spatial;    -- Geospatial functions
+
+-- Load extensions
+LOAD httpfs;
+LOAD icu;
+
+-- Query remote files
+SELECT * FROM read_parquet('s3://bucket/data.parquet');
+```
+
+### Query Optimization
+
+DuckDB includes powerful optimization:
+
+- **Columnar storage**: Optimized for analytical queries
+- **Vectorized execution**: Process data in batches
+- **Parallel execution**: Automatic multi-threading
+- **Query plan caching**: Reuse compiled queries
+
+```sql
+EXPLAIN SELECT * FROM large_table WHERE category = 'electronics';
+```
+
+## Performance Features
+
+### Streaming & Large Datasets
+
+DuckDB can process datasets larger than RAM:
+
+- Out-of-core processing
+- Streaming aggregations
+- Spilling to disk when needed
+
+### Parallel Query Execution
+
+Automatic parallelization:
+
+```sql
+-- Automatically uses all CPU cores
+SELECT category, COUNT(*) 
+FROM large_table 
+GROUP BY category;
+
+-- Configure threads
+SET threads TO 4;
+```
+
+### Query Cancellation
+
+Zequel can interrupt long-running DuckDB queries using the driver's interrupt mechanism.
+
+## Limitations
+
+<Warning>
+DuckDB is optimized for analytics, not transactions:
+</Warning>
+
+### Schema Limitations
+
+- **No ALTER COLUMN**: Cannot modify column types
+  - Must recreate table with new schema
+- **No stored procedures or functions**: DuckDB doesn't support user-defined routines
+- **No triggers**: Not supported in current versions
+- **No user management**: File-based permissions only
+
+### Concurrency Limitations
+
+- **Single writer**: One write transaction at a time
+- **Optimized for reads**: Best for read-heavy analytical workloads
+- **Not designed for OLTP**: Use PostgreSQL or MySQL for transactional workloads
+
+### Feature Limitations
+
+- Cannot add foreign keys to existing tables
+- Cannot add primary keys to existing tables
+- Limited ALTER TABLE operations
+
+## Use Cases
+
+### Ideal For:
+
+✅ Analytical queries on large datasets
+✅ Data science and machine learning workflows
+✅ Aggregations, joins, and window functions
+✅ Querying Parquet, CSV, and JSON files
+✅ Local data analysis
+✅ ETL pipelines
+✅ Embedded analytics in applications
+
+### Not Ideal For:
+
+❌ High-concurrency transactional workloads (OLTP)
+❌ Real-time data ingestion
+❌ Multi-user write scenarios
+❌ Applications requiring stored procedures
+
+## Best Practices
+
+1. **Use appropriate data types**
+   - Use INTEGER instead of VARCHAR for numbers
+   - Use DATE/TIMESTAMP for dates, not strings
+
+2. **Leverage columnar storage**
+   - SELECT only columns you need
+   - Filter early in queries
+
+3. **Use Parquet for large datasets**
+   ```sql
+   COPY (SELECT * FROM large_table) TO 'output.parquet' (FORMAT PARQUET);
+   ```
+
+4. **Monitor memory usage**
+   ```sql
+   SELECT * FROM duckdb_memory();
+   ```
+
+5. **Analyze query plans**
+   ```sql
+   EXPLAIN ANALYZE SELECT ...
+   ```
+
+6. **Use persistent databases for large datasets**
+   - File-based storage is faster than in-memory for large data
+
+## File Associations
+
+Zequel automatically associates with DuckDB files:
+
+- `.duckdb`
+- `.ddb`
+
+Double-click a DuckDB file to open it in Zequel.
+
+## Docker Development
+
+Zequel includes a DuckDB seed database:
+
+```bash
+# Located at:
+./docker/duckdb/zequel.duckdb
+
+# Regenerate from init.sql:
+rm docker/duckdb/zequel.duckdb
+duckdb docker/duckdb/zequel.duckdb < docker/duckdb/init.sql
+```
+
+The seed database includes:
+- Tables with analytical data
+- Complex data types (arrays, structs, maps)
+- Views for common aggregations
+- Sample analytical queries
+
+## Comparison with SQLite
+
+| Feature | SQLite | DuckDB |
+|---------|--------|--------|
+| **Use Case** | OLTP (transactions) | OLAP (analytics) |
+| **Performance** | Fast for simple queries | Fast for complex aggregations |
+| **Complex Types** | Limited | Rich (arrays, structs, maps) |
+| **File Formats** | SQLite only | Parquet, CSV, JSON, etc. |
+| **Analytics** | Basic | Advanced (window functions, etc.) |
+| **Concurrency** | Good for reads | Optimized for read-heavy |
+| **Storage** | Row-based | Column-based |
+
+## Additional Resources
+
+- [DuckDB Documentation](https://duckdb.org/docs/)
+- [DuckDB SQL Reference](https://duckdb.org/docs/sql/introduction)
+- [DuckDB Extensions](https://duckdb.org/docs/extensions/overview)
+- [Why DuckDB](https://duckdb.org/why_duckdb)

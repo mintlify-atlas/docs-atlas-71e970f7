@@ -1,0 +1,444 @@
+---
+title: 'MongoDB'
+description: 'Connect to and manage MongoDB databases'
+icon: 'leaf'
+---
+
+## Overview
+
+MongoDB is a document-oriented NoSQL database that stores data in flexible, JSON-like documents. Zequel provides full support for MongoDB through the official `mongodb` driver (v7.0.0).
+
+## Supported Versions
+
+- MongoDB 4.4+
+- MongoDB 5.0+
+- MongoDB 6.0+
+- MongoDB 7.0+
+- MongoDB Atlas (cloud)
+
+## Connection
+
+### Standard Connection
+
+```
+Host: localhost
+Port: 27017
+Database: admin
+Username: (optional)
+Password: (optional)
+```
+
+### Connection String (URI)
+
+MongoDB supports connection URIs:
+
+```
+mongodb://localhost:27017
+mongodb://user:password@localhost:27017/database
+mongodb+srv://cluster.mongodb.net/database  # MongoDB Atlas
+```
+
+<Note>
+You can paste a full MongoDB connection string into the Database field, and Zequel will use it directly.
+</Note>
+
+### Authentication
+
+Default authentication database is `admin`:
+
+```javascript
+{
+  host: 'localhost',
+  port: 27017,
+  database: 'myapp',
+  username: 'myuser',
+  password: 'mypassword'
+  // Automatically adds: ?authSource=admin
+}
+```
+
+### SSL/TLS Configuration
+
+MongoDB supports TLS connections:
+
+```javascript
+{
+  host: 'cluster.mongodb.net',
+  ssl: true,
+  sslConfig: {
+    rejectUnauthorized: true,
+    ca: fs.readFileSync('ca.pem')
+  }
+}
+```
+
+## MongoDB Query Language
+
+Zequel supports MongoDB's native query syntax:
+
+### Collection Operations
+
+```javascript
+// Find documents
+db.users.find({age: {$gt: 18}})
+db.users.findOne({email: "test@example.com"})
+
+// Insert documents
+db.users.insertOne({name: "Alice", age: 30, email: "alice@example.com"})
+db.users.insertMany([{name: "Bob"}, {name: "Charlie"}])
+
+// Update documents
+db.users.updateOne({name: "Alice"}, {$set: {age: 31}})
+db.users.updateMany({status: "inactive"}, {$set: {archived: true}})
+
+// Delete documents
+db.users.deleteOne({_id: ObjectId("...")}
+)
+db.users.deleteMany({status: "deleted"})
+
+// Count documents
+db.users.countDocuments({status: "active"})
+
+// Distinct values
+db.users.distinct("country", {status: "active"})
+```
+
+### Aggregation Pipeline
+
+```javascript
+db.orders.aggregate([
+  {$match: {status: "completed"}},
+  {$group: {
+    _id: "$customer_id",
+    total: {$sum: "$amount"},
+    count: {$sum: 1}
+  }},
+  {$sort: {total: -1}},
+  {$limit: 10}
+])
+```
+
+### Index Operations
+
+```javascript
+// Create index
+db.users.createIndex({email: 1}, {name: "idx_email", unique: true})
+db.users.createIndex({location: "2dsphere"})  // Geospatial index
+
+// Drop index
+db.users.dropIndex("idx_email")
+```
+
+### Collection Management
+
+```javascript
+// Drop collection
+db.users.drop()
+
+// Get collection names
+db.getCollectionNames()
+
+// Database stats
+db.stats()
+```
+
+## Features
+
+### Collections (Tables)
+
+- Create and drop collections
+- Rename collections
+- View collection statistics
+- Document count estimation
+
+### Documents (Rows)
+
+MongoDB stores data as BSON documents:
+
+```json
+{
+  "_id": ObjectId("507f1f77bcf86cd799439011"),
+  "name": "Alice",
+  "age": 30,
+  "email": "alice@example.com",
+  "address": {
+    "street": "123 Main St",
+    "city": "New York"
+  },
+  "tags": ["developer", "remote"],
+  "created_at": ISODate("2024-01-01T00:00:00Z")
+}
+```
+
+### Data Types
+
+MongoDB BSON types:
+
+<Tabs>
+  <Tab title="Basic">
+    - String
+    - Number (Int32, Int64, Double)
+    - Boolean
+    - Null
+  </Tab>
+  <Tab title="Special">
+    - ObjectId (unique identifier)
+    - Date (ISODate)
+    - Timestamp
+    - Decimal128 (high-precision decimal)
+  </Tab>
+  <Tab title="Complex">
+    - Object (embedded document)
+    - Array
+    - Binary (Binary data)
+    - RegExp
+  </Tab>
+</Tabs>
+
+### Indexes
+
+- **Single field**: `{field: 1}` (ascending) or `{field: -1}` (descending)
+- **Compound**: `{field1: 1, field2: -1}`
+- **Unique**: Prevent duplicate values
+- **TTL**: Auto-delete documents after time
+- **Text**: Full-text search
+- **2dsphere**: Geospatial queries
+- **Hashed**: Hash-based sharding
+
+```javascript
+// TTL index - auto-delete after 30 days
+db.sessions.createIndex(
+  {createdAt: 1},
+  {expireAfterSeconds: 2592000}
+)
+
+// Text index for search
+db.articles.createIndex({title: "text", content: "text"})
+db.articles.find({$text: {$search: "mongodb"}})
+```
+
+### Schema Validation (Optional)
+
+Enforce document structure:
+
+```javascript
+db.createCollection("users", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["name", "email"],
+      properties: {
+        name: {
+          bsonType: "string",
+          description: "must be a string and is required"
+        },
+        email: {
+          bsonType: "string",
+          pattern: "^.+@.+$",
+          description: "must be a valid email"
+        },
+        age: {
+          bsonType: "int",
+          minimum: 0,
+          description: "must be a positive integer"
+        }
+      }
+    }
+  }
+})
+```
+
+## Schema-less Operations
+
+MongoDB is schema-less, so traditional SQL operations work differently:
+
+### Adding Fields
+
+Fields are added automatically when documents are inserted:
+
+```javascript
+// Add new field to all documents
+db.users.updateMany({}, {$set: {status: "active"}})
+```
+
+### Removing Fields
+
+```javascript
+// Remove field from all documents
+db.users.updateMany({}, {$unset: {old_field: ""}})
+```
+
+Zequel provides a UI for these operations.
+
+### Renaming Fields
+
+```javascript
+// Rename field in all documents
+db.users.updateMany({}, {$rename: {old_name: "new_name"}})
+```
+
+## MongoDB-Specific Features
+
+### Change Streams
+
+Watch for real-time changes (requires replica set):
+
+```javascript
+const changeStream = db.users.watch();
+changeStream.on('change', (change) => {
+  console.log(change);
+});
+```
+
+### Transactions (4.0+)
+
+Multi-document ACID transactions:
+
+```javascript
+const session = client.startSession();
+session.startTransaction();
+try {
+  db.accounts.updateOne({_id: 1}, {$inc: {balance: -100}}, {session});
+  db.accounts.updateOne({_id: 2}, {$inc: {balance: 100}}, {session});
+  await session.commitTransaction();
+} catch (error) {
+  await session.abortTransaction();
+} finally {
+  session.endSession();
+}
+```
+
+### GridFS
+
+Store large files (> 16MB):
+
+```javascript
+const bucket = new mongodb.GridFSBucket(db);
+fs.createReadStream('large-file.pdf')
+  .pipe(bucket.openUploadStream('large-file.pdf'));
+```
+
+### Views
+
+Create read-only views with aggregation pipelines:
+
+```javascript
+// Create view in Zequel
+{
+  "source": "orders",
+  "pipeline": [
+    {"$match": {"status": "completed"}},
+    {"$group": {
+      "_id": "$customer_id",
+      "total": {"$sum": "$amount"}
+    }}
+  ]
+}
+```
+
+### Time Series Collections (5.0+)
+
+```javascript
+db.createCollection("weather", {
+  timeseries: {
+    timeField: "timestamp",
+    metaField: "sensor_id",
+    granularity: "hours"
+  }
+})
+```
+
+## Users & Security
+
+Manage MongoDB users:
+
+```javascript
+// Create user
+db.createUser({
+  user: "appuser",
+  pwd: "password",
+  roles: [{role: "readWrite", db: "myapp"}]
+})
+
+// Drop user
+db.dropUser("appuser")
+
+// View users
+db.getUsers()
+```
+
+## Limitations
+
+<Note>
+MongoDB is schema-less, so some traditional RDBMS features don't apply:
+</Note>
+
+- **No foreign keys**: Relationships are managed in application code
+- **No joins** (use `$lookup` in aggregation pipeline instead)
+- **No stored procedures**: Use application logic
+- **No triggers**: Use Change Streams for reactive behavior
+- **Document size limit**: 16MB per document
+- **Field name restrictions**: Cannot start with `$` or contain `.`
+
+## Best Practices
+
+1. **Design for your queries**
+   - Embed related data for fast reads
+   - Use references for large or frequently changing data
+
+2. **Use indexes wisely**
+   - Index fields used in queries
+   - Monitor index usage with `explain()`
+   - Drop unused indexes
+
+3. **Avoid large documents**
+   - Keep documents under 16MB
+   - Use GridFS for large files
+
+4. **Use projection**
+   ```javascript
+   // Only fetch needed fields
+   db.users.find({}, {name: 1, email: 1, _id: 0})
+   ```
+
+5. **Use aggregation pipeline** for complex queries
+   ```javascript
+   db.orders.aggregate([
+     {$match: {status: "shipped"}},
+     {$lookup: {
+       from: "customers",
+       localField: "customer_id",
+       foreignField: "_id",
+       as: "customer"
+     }}
+   ])
+   ```
+
+6. **Enable authentication** in production
+   ```
+   mongod --auth
+   ```
+
+## Docker Development
+
+Zequel includes MongoDB in Docker Compose:
+
+```yaml
+services:
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: mongodb
+    volumes:
+      - ./docker/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
+```
+
+## Additional Resources
+
+- [MongoDB Documentation](https://www.mongodb.com/docs/)
+- [MongoDB Query Language](https://www.mongodb.com/docs/manual/crud/)
+- [Aggregation Pipeline](https://www.mongodb.com/docs/manual/aggregation/)
+- [Data Modeling Guide](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/)

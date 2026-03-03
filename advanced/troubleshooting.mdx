@@ -1,0 +1,545 @@
+---
+title: 'Troubleshooting'
+description: 'Solutions to common issues and error messages'
+icon: 'wrench'
+---
+
+This guide helps you resolve common issues you might encounter while using Zequel.
+
+## Connection Issues
+
+### Cannot Connect to Database
+
+**Symptoms**: Connection fails with timeout or "Cannot connect" error
+
+**Common Causes & Solutions**:
+
+<AccordionGroup>
+  <Accordion title="Incorrect Host or Port">
+    **Check**:
+    - Verify the hostname/IP address is correct
+    - Ensure the port number matches your database server
+    - Default ports:
+      - PostgreSQL: 5432
+      - MySQL/MariaDB: 3306
+      - SQL Server: 1433
+      - MongoDB: 27017
+      - Redis: 6379
+      - ClickHouse: 8123 (HTTP) or 9000 (native)
+
+    **Test**:
+    ```bash
+    # Test if the port is reachable
+    telnet hostname port
+    # or
+    nc -zv hostname port
+    ```
+  </Accordion>
+
+  <Accordion title="Database Server Not Running">
+    **Check**:
+    - Is the database server process running?
+    - Check server logs for startup errors
+
+    **For Local Databases**:
+    ```bash
+    # PostgreSQL
+    pg_ctl status
+
+    # MySQL
+    systemctl status mysql
+    # or
+    brew services list  # macOS
+
+    # Check if process is running
+    ps aux | grep postgres
+    ps aux | grep mysql
+    ```
+  </Accordion>
+
+  <Accordion title="Firewall Blocking Connection">
+    **Check**:
+    - Firewall rules on the database server
+    - Network firewall between client and server
+    - Cloud security groups (AWS, GCP, Azure)
+
+    **Allow**:
+    - Inbound traffic on the database port
+    - Your IP address in allowlist/whitelist
+  </Accordion>
+
+  <Accordion title="Authentication Failed">
+    **Verify**:
+    - Username is correct
+    - Password is correct (no extra spaces)
+    - User has permission to connect from your IP
+
+    **PostgreSQL**:
+    ```sql
+    -- Check pg_hba.conf for allowed connections
+    -- Add line like:
+    host all all 0.0.0.0/0 md5
+    ```
+
+    **MySQL**:
+    ```sql
+    -- Grant remote access
+    GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' IDENTIFIED BY 'password';
+    FLUSH PRIVILEGES;
+    ```
+  </Accordion>
+
+  <Accordion title="SSL/TLS Issues">
+    **For PostgreSQL**:
+    - Try disabling SSL mode if not required
+    - Set SSL Mode to "prefer" or "disable" in connection settings
+
+    **For MySQL**:
+    - Disable SSL if server doesn't support it
+    - Or provide proper SSL certificates
+  </Accordion>
+</AccordionGroup>
+
+### Connection Drops Frequently
+
+**Symptoms**: Connected successfully, but connection drops after a few minutes
+
+**Solutions**:
+
+1. **Check timeout settings** on your database server
+2. **Network instability**: Test with `ping hostname` for packet loss
+3. **VPN disconnections**: Ensure VPN remains connected
+4. **Server-side connection limits**: Check if max connections reached
+
+```sql
+-- PostgreSQL: Check max connections
+SHOW max_connections;
+SELECT count(*) FROM pg_stat_activity;
+
+-- MySQL: Check max connections
+SHOW VARIABLES LIKE 'max_connections';
+SHOW STATUS LIKE 'Threads_connected';
+```
+
+### SSH Tunnel Connection Fails
+
+**Symptoms**: "SSH connection failed" error
+
+**Solutions**:
+
+<Steps>
+  <Step title="Verify SSH Credentials">
+    - SSH host is reachable
+    - SSH port (usually 22) is open
+    - SSH username is correct
+    - SSH key or password is valid
+
+    Test SSH manually:
+    ```bash
+    ssh -p 22 username@ssh-host
+    ```
+  </Step>
+
+  <Step title="Check SSH Key Permissions">
+    SSH keys must have correct permissions:
+    ```bash
+    chmod 600 ~/.ssh/id_rsa
+    chmod 644 ~/.ssh/id_rsa.pub
+    ```
+  </Step>
+
+  <Step title="Verify Port Forwarding">
+    Ensure the database server is accessible from the SSH host:
+    ```bash
+    # From SSH host, test database connection
+    telnet database-host 5432
+    ```
+  </Step>
+
+  <Step title="Check SSH Server Config">
+    Some SSH servers disable port forwarding:
+    ```bash
+    # On SSH server, check /etc/ssh/sshd_config
+    AllowTcpForwarding yes
+    ```
+  </Step>
+</Steps>
+
+## Query Issues
+
+### Query Times Out
+
+**Symptoms**: Long-running query eventually fails with timeout
+
+**Solutions**:
+
+1. **Add a LIMIT clause** to reduce result size
+   ```sql
+   SELECT * FROM large_table LIMIT 1000;
+   ```
+
+2. **Add indexes** to speed up queries
+   ```sql
+   -- PostgreSQL/MySQL
+   CREATE INDEX idx_column ON table_name(column_name);
+   ```
+
+3. **Filter with WHERE clause** early
+   ```sql
+   -- Bad: Loads everything then filters
+   SELECT * FROM orders WHERE date > '2024-01-01';
+
+   -- Good: Uses index if available
+   CREATE INDEX idx_orders_date ON orders(date);
+   SELECT * FROM orders WHERE date > '2024-01-01';
+   ```
+
+4. **Check server query timeout settings**
+   ```sql
+   -- PostgreSQL
+   SET statement_timeout = '30s';
+
+   -- MySQL
+   SET SESSION max_execution_time = 30000; -- milliseconds
+   ```
+
+### Syntax Error in Query
+
+**Symptoms**: "Syntax error near..." message
+
+**Common Issues**:
+
+- **Wrong SQL dialect**: PostgreSQL vs MySQL syntax differences
+- **Reserved keywords**: Use quotes around reserved words
+- **Missing semicolon**: Not required in Zequel but some habits die hard
+- **String quotes**: Use single quotes for strings in SQL
+
+**Examples**:
+
+```sql
+-- Wrong: Using backticks in PostgreSQL
+SELECT `name` FROM `users`;
+
+-- Correct: Use double quotes or no quotes
+SELECT "name" FROM users;
+SELECT name FROM users;
+
+-- Wrong: Reserved keyword without quotes
+SELECT order FROM orders;
+
+-- Correct: Quote reserved words
+SELECT "order" FROM orders;
+```
+
+<Tip>
+  Use the **Format SQL** feature (`Cmd/Ctrl+Shift+F`) to auto-format your queries and catch common syntax issues.
+</Tip>
+
+### Results Not Showing
+
+**Symptoms**: Query executes successfully but no results appear
+
+**Check**:
+
+1. **Query actually returns data**
+   ```sql
+   SELECT COUNT(*) FROM table_name WHERE your_conditions;
+   ```
+
+2. **Result limit is not 0**
+   - Check Settings → Query Settings → Default Limit
+
+3. **Scroll down** - Results might be below the fold
+
+4. **Check for errors** in the bottom panel logs
+
+## Performance Issues
+
+### Zequel Runs Slowly
+
+**Symptoms**: Application feels sluggish or unresponsive
+
+**Solutions**:
+
+<AccordionGroup>
+  <Accordion title="Too Many Open Tabs">
+    - Close unused tabs
+    - Each tab maintains its own state and data
+    - Recommended: Keep under 10-15 tabs open
+  </Accordion>
+
+  <Accordion title="Large Result Sets">
+    - Reduce page size in Settings → Grid Settings
+    - Add more specific WHERE clauses
+    - Use LIMIT on queries
+  </Accordion>
+
+  <Accordion title="Memory Usage">
+    Check Activity Monitor/Task Manager:
+    - Close other applications
+    - Restart Zequel to clear caches
+    - Consider increasing system RAM
+  </Accordion>
+
+  <Accordion title="Database Server Slow">
+    - Server might be under heavy load
+    - Check server metrics (CPU, RAM, disk I/O)
+    - Optimize slow queries
+    - Add database indexes
+  </Accordion>
+</AccordionGroup>
+
+### Loading Schema Takes Forever
+
+**Symptoms**: Connecting to database or opening Command Palette is very slow
+
+**Causes**:
+- Database has thousands of tables/columns
+- Slow network connection
+- Database server is slow to respond
+
+**Solutions**:
+1. **Use sidebar navigation** instead of Command Palette for large schemas
+2. **Filter by database/schema** to reduce objects loaded
+3. **Optimize database catalog queries** on the server
+4. **Close and reopen connection** to reload schema cache
+
+## Data Issues
+
+### Changes Not Saving
+
+**Symptoms**: Edited table data doesn't persist after clicking "Commit Changes"
+
+**Check**:
+
+1. **Safe Mode is disabled**
+   - Look for shield icon in header bar
+   - Safe Mode prevents all write operations
+
+2. **Table has a primary key**
+   - Zequel requires a primary key to update rows
+   - Add a primary key if missing:
+   ```sql
+   ALTER TABLE table_name ADD PRIMARY KEY (id);
+   ```
+
+3. **User has write permissions**
+   ```sql
+   -- PostgreSQL: Check permissions
+   SELECT grantee, privilege_type 
+   FROM information_schema.role_table_grants 
+   WHERE table_name='your_table';
+
+   -- MySQL: Check permissions
+   SHOW GRANTS FOR 'username'@'host';
+   ```
+
+4. **Check error logs** in the bottom panel for specific error messages
+
+### Data Appears Blurred
+
+**Symptoms**: All data in tables is blurred/unreadable
+
+**Solution**: **Privacy Mode is enabled**
+- Click the eye icon in the header bar to disable
+- Privacy Mode blurs sensitive data for screen sharing
+
+### Cannot Delete Row
+
+**Symptoms**: Delete button is disabled or delete fails
+
+**Check**:
+1. **Safe Mode** - Disable it
+2. **Permissions** - User needs DELETE privilege
+3. **Foreign key constraints** - Other tables reference this row
+
+```sql
+-- PostgreSQL: Disable foreign key checks temporarily (careful!)
+SET CONSTRAINTS ALL DEFERRED;
+DELETE FROM table_name WHERE id = 123;
+COMMIT;
+
+-- MySQL: Disable foreign key checks (careful!)
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE FROM table_name WHERE id = 123;
+SET FOREIGN_KEY_CHECKS = 1;
+```
+
+<Warning>
+  Disabling foreign key checks can lead to data integrity issues. Only do this if you understand the implications.
+</Warning>
+
+## Application Issues
+
+### Zequel Won't Start
+
+**Symptoms**: Application crashes immediately or won't launch
+
+**Solutions**:
+
+1. **Check system requirements**
+   - macOS 10.15 or later
+   - Windows 10 or later
+   - Linux with modern kernel
+
+2. **Reset app data**
+   - Corrupted settings might prevent startup
+   - Delete app data folder:
+     - macOS: `~/Library/Application Support/Zequel/`
+     - Windows: `%APPDATA%/Zequel/`
+     - Linux: `~/.config/Zequel/`
+
+3. **Reinstall Zequel**
+   - Download latest version from [zequel.dev](https://zequel.dev)
+   - Uninstall current version completely
+   - Install fresh copy
+
+### Keyboard Shortcuts Not Working
+
+**Symptoms**: Pressing shortcut keys does nothing
+
+**Check**:
+
+1. **Another application is capturing the shortcut**
+   - Close other apps and try again
+   - Check for system-wide shortcut conflicts
+
+2. **Focus is in wrong place**
+   - Some shortcuts only work in specific contexts
+   - Click into the main window area
+
+3. **Operating system differences**
+   - Use `Cmd` on macOS, `Ctrl` on Windows/Linux
+   - Check the menu to see actual shortcuts for your platform
+
+### Updates Not Installing
+
+**Symptoms**: Update downloaded but doesn't install
+
+**Solutions**:
+
+1. **Quit Zequel completely** before updating
+2. **Check disk space** - Need enough space for new version
+3. **Run as administrator** (Windows) if permission denied
+4. **Manually download** installer from GitHub releases
+5. **Check Update Channel** - Switch to Stable if on Beta
+
+## Database-Specific Issues
+
+### SQLite
+
+**Database Locked Error**:
+- Another process has the database file open
+- Close other connections to the same file
+- Check for `.db-journal` or `.db-wal` files (delete if stale)
+
+### PostgreSQL
+
+**Too Many Connections**:
+```sql
+-- Check current connections
+SELECT count(*) FROM pg_stat_activity;
+
+-- Increase max connections (requires restart)
+ALTER SYSTEM SET max_connections = 200;
+```
+
+**Encoding Issues**:
+```sql
+-- Check database encoding
+SHOW server_encoding;
+
+-- Create database with specific encoding
+CREATE DATABASE mydb ENCODING 'UTF8';
+```
+
+### MySQL/MariaDB
+
+**Access Denied for User**:
+```sql
+-- Check user exists and has privileges
+SELECT user, host FROM mysql.user WHERE user = 'username';
+
+-- Grant all privileges
+GRANT ALL PRIVILEGES ON database.* TO 'username'@'%';
+FLUSH PRIVILEGES;
+```
+
+### MongoDB
+
+**Authentication Failed**:
+- Ensure authentication database is correct (usually `admin`)
+- Check if user exists in correct database
+- Verify replica set configuration if using one
+
+## Getting Help
+
+If you can't resolve your issue:
+
+1. **Check application logs**
+   - Location: See [Settings](/advanced/settings#logs)
+   - Look for error messages near the time of the issue
+
+2. **Search existing issues**
+   - [GitHub Issues](https://github.com/zequel-labs/zequel/issues)
+   - Someone might have already reported and solved it
+
+3. **Report a bug**
+   - Include: OS version, Zequel version, database type
+   - Provide: Steps to reproduce, error messages, relevant logs
+   - [Create new issue](https://github.com/zequel-labs/zequel/issues/new)
+
+4. **Join discussions**
+   - [GitHub Discussions](https://github.com/zequel-labs/zequel/discussions)
+   - Ask questions and get help from the community
+
+<Tip>
+  When reporting issues, include the Zequel version (found in **About Zequel**) and your operating system version.
+</Tip>
+
+## Emergency Recovery
+
+### Complete Reset
+
+If Zequel is completely broken and nothing else works:
+
+<Steps>
+  <Step title="Backup Connection Data (if possible)">
+    Export your connections before resetting:
+    - File → Export Connections (if accessible)
+  </Step>
+
+  <Step title="Close Zequel Completely">
+    Ensure no Zequel processes are running.
+  </Step>
+
+  <Step title="Delete App Data">
+    **macOS**:
+    ```bash
+    rm -rf ~/Library/Application\ Support/Zequel/
+    rm -rf ~/Library/Preferences/dev.zequel.*
+    ```
+
+    **Windows**:
+    ```cmd
+    rmdir /s "%APPDATA%\Zequel"
+    ```
+
+    **Linux**:
+    ```bash
+    rm -rf ~/.config/Zequel/
+    ```
+  </Step>
+
+  <Step title="Restart Zequel">
+    Launch Zequel - it will recreate all default settings.
+  </Step>
+
+  <Step title="Restore Connections">
+    If you exported connections, reimport them now.
+  </Step>
+</Steps>
+
+<Warning>
+  This deletes ALL data including saved connections, query history, and settings. Only use as a last resort.
+</Warning>

@@ -1,0 +1,111 @@
+---
+title: 'Supported Databases'
+description: 'Overview of all database systems supported by Zequel'
+---
+
+Zequel provides native support for 10 different database systems, from traditional SQL databases to NoSQL and in-memory stores. Each database is supported through dedicated drivers that provide optimal performance and feature compatibility.
+
+## Relational Databases
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL" icon="database" href="/databases/postgresql">
+    Powerful open-source relational database with advanced features
+  </Card>
+  <Card title="MySQL" icon="database" href="/databases/mysql">
+    Popular open-source relational database
+  </Card>
+  <Card title="MariaDB" icon="database" href="/databases/mariadb">
+    MySQL-compatible database with enhanced features
+  </Card>
+  <Card title="SQL Server" icon="database" href="/databases/sqlserver">
+    Microsoft's enterprise relational database system
+  </Card>
+</CardGroup>
+
+## Embedded Databases
+
+<CardGroup cols={2}>
+  <Card title="SQLite" icon="hard-drive" href="/databases/sqlite">
+    Lightweight file-based SQL database
+  </Card>
+  <Card title="DuckDB" icon="hard-drive" href="/databases/duckdb">
+    Analytical SQL database for OLAP workloads
+  </Card>
+</CardGroup>
+
+## Analytics & OLAP
+
+<CardGroup cols={2}>
+  <Card title="ClickHouse" icon="chart-line" href="/databases/clickhouse">
+    Column-oriented database for real-time analytics
+  </Card>
+</CardGroup>
+
+## NoSQL Databases
+
+<CardGroup cols={2}>
+  <Card title="MongoDB" icon="leaf" href="/databases/mongodb">
+    Document-oriented NoSQL database
+  </Card>
+  <Card title="Redis" icon="bolt" href="/databases/redis">
+    In-memory key-value data store
+  </Card>
+</CardGroup>
+
+## Database Drivers & Versions
+
+Zequel uses the following official database drivers:
+
+| Database | Driver | Version |
+|----------|--------|--------|
+| PostgreSQL | `pg` | ^8.13.1 |
+| MySQL | `mysql2` | ^3.11.5 |
+| MariaDB | `mysql2` | ^3.11.5 |
+| SQL Server | `mssql` | ^12.2.0 |
+| SQLite | `better-sqlite3` | ^11.6.0 |
+| DuckDB | `@duckdb/node-api` | ^1.4.4-r.1 |
+| ClickHouse | `@clickhouse/client` | ^1.16.0 |
+| MongoDB | `mongodb` | ^7.0.0 |
+| Redis | `ioredis` | ^5.9.2 |
+
+## Common Features
+
+All supported databases provide:
+
+- **Connection Management**: Secure connections with SSL/TLS support
+- **Query Execution**: Interactive query editor with syntax highlighting
+- **Schema Browser**: Navigate databases, tables, views, and relationships
+- **Data Viewing**: Browse and filter table data with pagination
+- **Export/Import**: Backup and restore capabilities
+
+## Database-Specific Features
+
+Each database driver implements features specific to that system:
+
+### SQL Databases (PostgreSQL, MySQL, MariaDB, SQL Server)
+- Tables, views, and materialized views
+- Indexes and foreign key constraints
+- Stored procedures and functions
+- Triggers and sequences
+- User and role management
+
+### Embedded Databases (SQLite, DuckDB)
+- File-based operation
+- Direct file access
+- Local schema editing
+
+### Analytics (ClickHouse)
+- MergeTree engine support
+- Data skipping indexes
+- Partitions and materialized views
+- Column-oriented storage
+
+### NoSQL (MongoDB, Redis)
+- Document/key-value operations
+- Schema-less data modeling
+- Native query languages
+- Collections and key management
+
+<Note>
+Not all features are available for every database type. Check individual database pages for specific capabilities and limitations.
+</Note>

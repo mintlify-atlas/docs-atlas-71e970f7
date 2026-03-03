@@ -1,0 +1,363 @@
+---
+title: 'Data Grid'
+description: 'View, edit, and manage table data with an Excel-like interface'
+---
+
+The Data Grid displays table rows in a spreadsheet-like interface with powerful editing, filtering, and navigation features. Modify data directly in cells, track pending changes, and commit them in batches.
+
+## Viewing Table Data
+
+<Steps>
+  <Step title="Open a Table">
+    Click any table in the sidebar to open it in the Data Grid view.
+  </Step>
+  <Step title="Browse Data">
+    Scroll through rows using the scrollbar or arrow keys. The grid uses virtual scrolling for performance with large datasets.
+  </Step>
+  <Step title="View Cell Details">
+    Click a row to view full column values in the right panel, especially useful for long text or JSON data.
+  </Step>
+</Steps>
+
+## Grid Controls
+
+### Column Operations
+
+- **Sort**: Click column headers to sort ascending/descending (hold Shift to multi-sort)
+- **Resize**: Drag the column border to adjust width
+- **Reorder**: Drag column headers to rearrange columns
+- **Hide/Show**: Click the column visibility button in the status bar to toggle columns
+
+### Row Selection
+
+- **Single Row**: Click any row to select it
+- **Multiple Rows**: Hold `Cmd` and click to select multiple rows
+- **Range Selection**: Hold `Shift` and click to select a range
+- **Activate Row**: Double-click to view row details in the right panel
+
+## Editing Data
+
+### Inline Editing
+
+<Steps>
+  <Step title="Enable Editing">
+    Ensure Safe Mode is disabled for the connection. Editing controls appear automatically.
+  </Step>
+  <Step title="Edit a Cell">
+    Double-click any cell or press `Enter` to start editing.
+  </Step>
+  <Step title="Modify Value">
+    Type the new value. Use `Tab` to move to the next cell, `Shift+Tab` to move back.
+  </Step>
+  <Step title="Save Changes">
+    Modified cells turn yellow. Press `Cmd+S` or click **Apply** in the status bar to commit all changes.
+  </Step>
+</Steps>
+
+### Cell Types
+
+<Tabs>
+  <Tab title="Text">
+    Standard text input. Empty values can be set to `NULL` by clearing the cell.
+  </Tab>
+  <Tab title="Numbers">
+    Numeric input with validation. Invalid numbers are rejected.
+  </Tab>
+  <Tab title="Booleans">
+    Checkbox for `TRUE`/`FALSE` values. Supports database-specific boolean types.
+  </Tab>
+  <Tab title="Dates">
+    Date picker for `DATE`, `TIMESTAMP`, `DATETIME` columns. Shows a calendar popup on click.
+  </Tab>
+  <Tab title="JSON">
+    Large text editor for JSON columns. Validates JSON syntax before saving.
+  </Tab>
+</Tabs>
+
+### Pending Changes Tracking
+
+Zequel tracks all modifications before they're committed:
+
+- **Yellow Highlight**: Cells with pending edits
+- **Green Background**: New rows waiting to be inserted
+- **Red Background + Strikethrough**: Rows marked for deletion
+- **Changes Count**: Status bar shows total pending changes (edits + inserts + deletes)
+
+<Note>
+  Changes are preserved even if you switch to the Structure view or navigate away. They're only discarded when you close the tab.
+</Note>
+
+## Adding Rows
+
+<Steps>
+  <Step title="Click Add Row">
+    Click the **+** button in the status bar or press `Cmd+N`.
+  </Step>
+  <Step title="Fill Cells">
+    A new row appears at the bottom with a green background. Fill in values for each column.
+  </Step>
+  <Step title="Auto-Increment Columns">
+    Primary key columns with auto-increment show `(auto)`. They're populated by the database on insert.
+  </Step>
+  <Step title="Apply">
+    Click **Apply** to insert the row into the database.
+  </Step>
+</Steps>
+
+## Deleting Rows
+
+### Single Row Delete
+
+<Steps>
+  <Step title="Select Row">
+    Click the row you want to delete.
+  </Step>
+  <Step title="Mark for Deletion">
+    Press `Delete` or right-click → **Delete Row**.
+  </Step>
+  <Step title="Confirm">
+    The row turns red with strikethrough. Click **Apply** to permanently delete it.
+  </Step>
+</Steps>
+
+### Bulk Delete
+
+<Steps>
+  <Step title="Select Multiple Rows">
+    Hold `Cmd` and click multiple rows, or use `Shift` for a range.
+  </Step>
+  <Step title="Delete Selection">
+    Press `Delete` to mark all selected rows for deletion.
+  </Step>
+  <Step title="Review and Apply">
+    All marked rows show in red. Click **Apply** to delete them from the database.
+  </Step>
+</Steps>
+
+<Warning>
+  Deleted rows are permanently removed from the database when you click **Apply**. This action cannot be undone.
+</Warning>
+
+## Applying and Discarding Changes
+
+### Apply Changes
+
+Commit all pending modifications to the database:
+
+- **Button**: Click **Apply** in the status bar
+- **Keyboard**: Press `Cmd+S`
+- **Scope**: Applies all edits, inserts, and deletes in one transaction
+
+<Note>
+  For tables without primary keys, Zequel constructs `WHERE` clauses using all column values to ensure the correct row is updated.
+</Note>
+
+### Discard Changes
+
+Revert all pending modifications:
+
+- **Button**: Click **Discard** in the status bar
+- **Keyboard**: Press `Cmd+D`
+- **Effect**: Removes all yellow highlights, green rows, and red strikethroughs
+
+### Undo/Redo
+
+Quickly undo or redo individual changes:
+
+- **Undo**: Press `Cmd+Z` to undo the last edit, insertion, or deletion
+- **Redo**: Press `Shift+Cmd+Z` to redo an undone action
+- **Granularity**: Undo/redo works at the cell level for edits and row level for inserts/deletes
+
+## Copy and Paste
+
+### Copy Cell Values
+
+<Steps>
+  <Step title="Select Cells">
+    Click a cell or select multiple cells/rows.
+  </Step>
+  <Step title="Copy">
+    Press `Cmd+C` or right-click → **Copy**.
+  </Step>
+  <Step title="Paste">
+    Paste into Excel, Google Sheets, or any text editor. Values are tab-separated.
+  </Step>
+</Steps>
+
+### Paste Rows from Clipboard
+
+Import data from spreadsheets:
+
+<Steps>
+  <Step title="Copy Data">
+    Copy rows from Excel or Google Sheets (include headers).
+  </Step>
+  <Step title="Paste Rows">
+    Right-click in the grid → **Paste Rows**, or press `Cmd+V`.
+  </Step>
+  <Step title="Column Matching">
+    Zequel matches clipboard column headers to table columns (case-insensitive).
+  </Step>
+  <Step title="Insert">
+    Rows are inserted immediately. Refresh the grid to see them.
+  </Step>
+</Steps>
+
+<Note>
+  Pasted data supports both tab-separated (TSV) and comma-separated (CSV) formats. Headers must match table column names.
+</Note>
+
+## Foreign Key Navigation
+
+Navigate relationships between tables:
+
+<Steps>
+  <Step title="Identify FK Column">
+    Cells in foreign key columns show a **→** icon on hover.
+  </Step>
+  <Step title="Click to Navigate">
+    Click the icon to jump to the referenced table, filtered to the related row.
+  </Step>
+  <Step title="View Related Data">
+    A new tab opens showing the referenced table with a filter applied.
+  </Step>
+</Steps>
+
+**Example**: In an `orders` table, click the **→** next to `customer_id` to open the `customers` table filtered to that customer.
+
+## Filtering Data
+
+### Add Filters
+
+<Steps>
+  <Step title="Open Filter Panel">
+    Click the filter icon in the status bar or press `Cmd+F`.
+  </Step>
+  <Step title="Select Column">
+    Choose a column from the dropdown.
+  </Step>
+  <Step title="Choose Operator">
+    Pick an operator: `=`, `!=`, `<`, `>`, `<=`, `>=`, `LIKE`, `IS NULL`, `IS NOT NULL`.
+  </Step>
+  <Step title="Enter Value">
+    Type the filter value (skip for `IS NULL`/`IS NOT NULL`).
+  </Step>
+  <Step title="Apply">
+    Click **Apply Filters** to reload the grid with filtered data.
+  </Step>
+</Steps>
+
+### Multiple Filters
+
+Add multiple filters to narrow results:
+
+- Filters combine with `AND` logic
+- Click **+ Add Filter** to add more conditions
+- Remove filters individually with the **×** button
+
+### Clear Filters
+
+Click **Clear Filters** to remove all active filters and show all rows.
+
+## Pagination
+
+Navigate large tables efficiently:
+
+- **Page Size**: Set in Settings → Grid Settings (default: 1,000 rows)
+- **Navigation**: Use the status bar arrows to move between pages
+- **Jump to Page**: Click the page indicator to jump to a specific page
+- **Total Count**: The status bar shows total rows (e.g., "1-1000 of 50,000")
+
+<Note>
+  Changing the page size in Settings applies immediately and adjusts pagination.
+</Note>
+
+## Exporting Data
+
+### Export Current Page
+
+Export only the rows currently visible:
+
+<Steps>
+  <Step title="Open Context Menu">
+    Right-click in the grid → **Export Page**.
+  </Step>
+  <Step title="Choose Format">
+    Select CSV, JSON, or SQL.
+  </Step>
+  <Step title="Configure Options">
+    Set delimiter (CSV), pretty print (JSON), or schema options (SQL).
+  </Step>
+  <Step title="Save">
+    Choose a destination and click **Export**.
+  </Step>
+</Steps>
+
+### Export Full Table
+
+Export all rows (not just the current page):
+
+<Steps>
+  <Step title="Click Export">
+    Click the export button in the status bar.
+  </Step>
+  <Step title="Select Format">
+    Choose CSV, JSON, or SQL.
+  </Step>
+  <Step title="Export">
+    Zequel streams all rows directly from the database to the file.
+  </Step>
+</Steps>
+
+<Warning>
+  Full table exports can take time for tables with millions of rows. The export runs in the background.
+</Warning>
+
+## Context Menu
+
+Right-click on any cell or row for quick actions:
+
+- **Copy**: Copy cell value to clipboard
+- **Copy Row**: Copy entire row (tab-separated)
+- **View Cell**: Open large values in a popup viewer
+- **Edit Cell**: Start editing (same as double-click)
+- **Delete Row**: Mark row for deletion
+- **Navigate FK**: Jump to referenced table (if applicable)
+- **Export Page**: Export current page data
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` | Start editing cell |
+| `Tab` | Move to next cell |
+| `Shift+Tab` | Move to previous cell |
+| `Cmd+S` | Apply changes |
+| `Cmd+D` | Discard changes |
+| `Cmd+Z` | Undo |
+| `Shift+Cmd+Z` | Redo |
+| `Cmd+C` | Copy cell/row |
+| `Cmd+V` | Paste rows |
+| `Cmd+N` | Add new row |
+| `Delete` | Delete selected row(s) |
+| `Cmd+F` | Open filter panel |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Review Before Applying">
+    Always review pending changes (yellow/green/red highlights) before clicking **Apply**. Changes are permanent.
+  </Accordion>
+  
+  <Accordion title="Use Filters for Large Tables">
+    Apply filters before editing large tables to reduce the data loaded into the grid.
+  </Accordion>
+  
+  <Accordion title="Batch Operations">
+    Make multiple edits, then click **Apply** once to commit them all in a single transaction.
+  </Accordion>
+  
+  <Accordion title="Foreign Key Constraints">
+    Be aware of foreign key constraints when deleting rows. Deletes may fail if referenced by other tables.
+  </Accordion>
+</AccordionGroup>

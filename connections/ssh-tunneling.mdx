@@ -1,0 +1,561 @@
+---
+title: 'SSH Tunneling'
+description: 'Connect to remote databases securely through SSH tunnels'
+---
+
+Zequel supports SSH tunneling to securely connect to databases that are not directly accessible, such as databases behind firewalls or in private networks.
+
+## How SSH Tunneling Works
+
+SSH tunneling creates an encrypted connection to a bastion/jump host, which then forwards traffic to your database server:
+
+```
+Zequel → SSH Tunnel → Bastion Host → Database Server
+```
+
+<Steps>
+  <Step title="SSH Connection">
+    Zequel connects to the bastion host using SSH credentials
+  </Step>
+
+  <Step title="Port Forwarding">
+    The SSH client creates a local port that forwards to the remote database
+  </Step>
+
+  <Step title="Database Connection">
+    Zequel connects to `localhost:<local-port>` which tunnels to the database
+  </Step>
+</Steps>
+
+## Configuration
+
+### SSH Config Interface
+
+```typescript
+interface SSHConfig {
+  enabled: boolean
+  host: string                              // SSH server hostname
+  port: number                              // SSH server port (default: 22)
+  username: string                          // SSH username
+  authMethod: 'password' | 'privateKey'     // Authentication method
+  password?: string                         // Password for password auth
+  privateKey?: string                       // Private key content for key auth
+  privateKeyPassphrase?: string             // Passphrase if key is encrypted
+}
+```
+
+### Basic SSH Configuration
+
+<CodeGroup>
+
+```typescript Password Authentication
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'internal-db.example.com',
+  port: 5432,
+  database: 'production',
+  username: 'db_user',
+  password: 'db_password',
+  ssh: {
+    enabled: true,
+    host: 'bastion.example.com',
+    port: 22,
+    username: 'ubuntu',
+    authMethod: 'password',
+    password: 'ssh_password'
+  }
+}
+```
+
+```typescript Private Key Authentication
+const connection = {
+  type: DatabaseType.MySQL,
+  host: '10.0.1.50',
+  port: 3306,
+  database: 'app_db',
+  username: 'app_user',
+  password: 'db_pass',
+  ssh: {
+    enabled: true,
+    host: 'jump.example.com',
+    port: 22,
+    username: 'deploy',
+    authMethod: 'privateKey',
+    privateKey: `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+...
+-----END OPENSSH PRIVATE KEY-----`
+  }
+}
+```
+
+```typescript Encrypted Private Key
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'db.internal',
+  port: 5432,
+  database: 'myapp',
+  username: 'postgres',
+  password: 'postgres_pass',
+  ssh: {
+    enabled: true,
+    host: 'bastion.company.com',
+    port: 2222,
+    username: 'sysadmin',
+    authMethod: 'privateKey',
+    privateKey: '-----BEGIN OPENSSH PRIVATE KEY-----...',
+    privateKeyPassphrase: 'key_passphrase'
+  }
+}
+```
+
+</CodeGroup>
+
+## SSH Tunnel Manager
+
+The `SSHTunnelManager` handles tunnel lifecycle using the `ssh2` library:
+
+### Creating Tunnels
+
+```typescript
+import { sshTunnelManager } from '@main/services/ssh-tunnel'
+
+// Create tunnel and get local port
+const localPort = await sshTunnelManager.createTunnel(
+  sessionId,
+  sshConfig,
+  remoteHost,    // Database server hostname
+  remotePort     // Database server port
+)
+
+// Connect to database via tunnel
+const dbConnection = {
+  host: '127.0.0.1',
+  port: localPort,  // Dynamically assigned
+  // ... other db config
+}
+```
+
+### Implementation Details
+
+The SSH tunnel manager:
+
+1. **Creates a local TCP server** on `127.0.0.1` with a random available port
+2. **Establishes SSH connection** to the bastion host using provided credentials
+3. **Forwards traffic** from the local port to the remote database
+4. **Manages tunnel lifecycle** tied to the connection session
+
+<Note>
+  Each tunnel listens on `127.0.0.1` only and uses a dynamically assigned port to avoid conflicts
+</Note>
+
+### Tunnel Lifecycle
+
+```typescript
+class SSHTunnelManager {
+  // Create tunnel and return local port
+  async createTunnel(
+    connectionId: string,
+    sshConfig: SSHConfig,
+    remoteHost: string,
+    remotePort: number
+  ): Promise<number>
+
+  // Close specific tunnel
+  closeTunnel(connectionId: string): void
+
+  // Check if tunnel exists
+  hasTunnel(connectionId: string): boolean
+
+  // Get local port for existing tunnel
+  getLocalPort(connectionId: string): number | null
+
+  // Close all tunnels
+  closeAllTunnels(): void
+}
+```
+
+## Connection Flow with SSH
+
+<Steps>
+  <Step title="Connection Request">
+    User initiates connection with SSH config enabled
+  </Step>
+
+  <Step title="SSH Tunnel Creation">
+    ```typescript
+    if (config.ssh?.enabled) {
+      const remoteHost = config.host || 'localhost'
+      const remotePort = config.port || DEFAULT_PORTS[config.type]
+      
+      const localPort = await sshTunnelManager.createTunnel(
+        sessionId,
+        config.ssh,
+        remoteHost,
+        remotePort
+      )
+      
+      // Update config to use tunnel
+      connectionConfig = {
+        ...config,
+        host: '127.0.0.1',
+        port: localPort
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Database Connection">
+    Database driver connects to `localhost:<localPort>`, traffic is forwarded through SSH tunnel
+  </Step>
+
+  <Step title="Cleanup on Disconnect">
+    When session ends, both database connection and SSH tunnel are closed
+  </Step>
+</Steps>
+
+## Error Handling
+
+### SSH Connection Errors
+
+Common SSH errors and solutions:
+
+<AccordionGroup>
+  <Accordion title="Authentication Failed">
+    **Cause**: Invalid credentials or private key
+    
+    **Solutions**:
+    - Verify username and password
+    - Check private key format (OpenSSH format required)
+    - Ensure private key has correct permissions
+    - Try private key passphrase if key is encrypted
+  </Accordion>
+
+  <Accordion title="Connection Timeout">
+    **Cause**: Cannot reach SSH server
+    
+    **Solutions**:
+    - Verify SSH host and port are correct
+    - Check firewall rules allow SSH traffic
+    - Ensure SSH server is running
+    - Try increasing `readyTimeout` (default: 30s)
+  </Accordion>
+
+  <Accordion title="Host Key Verification Failed">
+    **Cause**: SSH host key changed or unknown
+    
+    **Solutions**:
+    - Remove old host key from `~/.ssh/known_hosts`
+    - Verify you're connecting to correct server
+    - Check for man-in-the-middle attacks
+  </Accordion>
+
+  <Accordion title="Port Forwarding Failed">
+    **Cause**: Cannot forward to remote database
+    
+    **Solutions**:
+    - Verify database host and port are accessible from bastion
+    - Check bastion firewall rules
+    - Ensure database is running
+    - Verify network connectivity between bastion and database
+  </Accordion>
+</AccordionGroup>
+
+### Error Logging
+
+SSH tunnel errors are logged with detailed information:
+
+```typescript
+// SSH connection attempt
+logger.info('SSH connecting', {
+  host: connectConfig.host,
+  port: connectConfig.port,
+  username: connectConfig.username,
+  authMethod: sshConfig.authMethod,
+  hasPassword: !!connectConfig.password,
+  hasPrivateKey: !!connectConfig.privateKey
+})
+
+// SSH errors
+logger.error('SSH connection error:', JSON.stringify(err))
+```
+
+## Testing SSH Connections
+
+The connection test verifies both SSH tunnel AND database connection:
+
+```typescript
+const result = await connectionManager.testConnection(config)
+
+interface TestConnectionResult {
+  success: boolean
+  error?: string
+  latency?: number
+  serverVersion?: string
+  serverInfo?: Record<string, string>
+  sshSuccess?: boolean    // true if tunnel created successfully
+  sshError?: string       // SSH-specific error message
+}
+```
+
+<CodeGroup>
+
+```typescript SSH Test Success
+{
+  success: true,
+  latency: 342,
+  serverVersion: 'PostgreSQL 14.5',
+  serverInfo: {
+    'Encoding': 'UTF8',
+    'Timezone': 'UTC',
+    'Max Connections': '100'
+  },
+  sshSuccess: true,
+  sshError: null
+}
+```
+
+```typescript SSH Test Failure
+{
+  success: false,
+  error: 'SSH connection failed: Authentication failed',
+  sshSuccess: false,
+  sshError: 'Authentication failed'
+}
+```
+
+```typescript Database Test Failure (SSH OK)
+{
+  success: false,
+  error: 'password authentication failed for user "postgres"',
+  sshSuccess: true,  // Tunnel worked, database auth failed
+  sshError: null
+}
+```
+
+</CodeGroup>
+
+## Reconnection with SSH
+
+When a connection is lost, Zequel automatically recreates the SSH tunnel:
+
+```typescript
+async reconnect(id: string): Promise<boolean> {
+  // Close old SSH tunnel
+  if (sshTunnelManager.hasTunnel(id)) {
+    sshTunnelManager.closeTunnel(id)
+  }
+
+  // Recreate tunnel with same config
+  if (config.ssh?.enabled) {
+    const localPort = await sshTunnelManager.createTunnel(
+      id,
+      config.ssh,
+      remoteHost,
+      remotePort
+    )
+    connectionConfig.port = localPort
+  }
+
+  // Reconnect database
+  await driver.connect(connectionConfig)
+}
+```
+
+<Warning>
+  If reconnection fails during tunnel creation, subsequent attempts will retry the full SSH + database connection flow
+</Warning>
+
+## Supported Databases
+
+SSH tunneling works with all network-based databases:
+
+- PostgreSQL ✓
+- MySQL ✓
+- MariaDB ✓
+- SQL Server ✓
+- MongoDB ✓
+- Redis ✓
+- ClickHouse ✓
+
+<Note>
+  SQLite and DuckDB are file-based and do not support SSH tunneling
+</Note>
+
+## Private Key Formats
+
+Zequel supports OpenSSH private key format:
+
+```
+-----BEGIN OPENSSH PRIVATE KEY-----
+...
+-----END OPENSSH PRIVATE KEY-----
+```
+
+### Converting PEM to OpenSSH Format
+
+If you have an old PEM format key:
+
+```bash
+# Convert RSA private key to OpenSSH format
+ssh-keygen -p -m OpenSSH -f ~/.ssh/id_rsa
+
+# Generate new key in OpenSSH format
+ssh-keygen -t ed25519 -f ~/.ssh/zequel_key
+```
+
+## Security Considerations
+
+<Warning>
+  SSH credentials are stored in Zequel's encrypted local database. Private keys and passwords are never transmitted except during connection.
+</Warning>
+
+### Best Practices
+
+1. **Use private key authentication** instead of passwords when possible
+2. **Encrypt private keys** with a strong passphrase
+3. **Use dedicated SSH keys** for Zequel rather than your personal SSH key
+4. **Rotate SSH credentials** regularly
+5. **Limit bastion host access** using firewall rules and security groups
+6. **Enable SSH key-based authentication** on bastion hosts
+7. **Monitor SSH access logs** on bastion hosts
+
+## Example Scenarios
+
+### AWS RDS in Private Subnet
+
+```typescript
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'prod-db.abc123.us-east-1.rds.amazonaws.com',
+  port: 5432,
+  database: 'production',
+  username: 'app_user',
+  password: 'db_password',
+  ssl: true,  // RDS requires SSL
+  ssh: {
+    enabled: true,
+    host: 'ec2-12-34-56-78.compute-1.amazonaws.com',  // Bastion in public subnet
+    port: 22,
+    username: 'ec2-user',
+    authMethod: 'privateKey',
+    privateKey: '...'  // EC2 key pair
+  }
+}
+```
+
+### GCP Cloud SQL with IAP Tunnel
+
+```typescript
+const connection = {
+  type: DatabaseType.MySQL,
+  host: '10.128.0.3',  // Private IP
+  port: 3306,
+  database: 'app_db',
+  username: 'root',
+  password: 'password',
+  ssh: {
+    enabled: true,
+    host: 'bastion.example.com',  // Compute Engine instance
+    port: 22,
+    username: 'sa_...',  // Service account
+    authMethod: 'privateKey',
+    privateKey: '...'  // Service account key
+  }
+}
+```
+
+### Self-Hosted Database Behind VPN
+
+```typescript
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: '192.168.1.100',  // Internal network IP
+  port: 5432,
+  database: 'internal_db',
+  username: 'admin',
+  password: 'secure_password',
+  ssh: {
+    enabled: true,
+    host: 'vpn-gateway.company.com',
+    port: 2222,  // Custom SSH port
+    username: 'vpnuser',
+    authMethod: 'privateKey',
+    privateKey: '...',
+    privateKeyPassphrase: 'key_password'
+  }
+}
+```
+
+## Troubleshooting
+
+### Enable SSH Debug Logging
+
+SSH connection details are logged at info level:
+
+```typescript
+logger.info('SSH connecting', {
+  host: 'bastion.example.com',
+  port: 22,
+  username: 'ubuntu',
+  authMethod: 'privateKey',
+  hasPassword: false,
+  hasPrivateKey: true,
+  privateKeyPrefix: '-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl...'  // First 40 chars
+})
+
+logger.info('SSH handshake completed', negotiated)
+logger.info('SSH connection established')
+logger.info('SSH tunnel ready: localhost:54321 -> db.internal:5432')
+```
+
+### Common Issues
+
+<Tabs>
+  <Tab title="Connection Timeout">
+    Check network connectivity:
+    ```bash
+    # Test SSH connection manually
+    ssh -v user@bastion.example.com
+    
+    # Test database access from bastion
+    ssh user@bastion telnet db.internal 5432
+    ```
+  </Tab>
+
+  <Tab title="Permission Denied">
+    Verify SSH credentials:
+    ```bash
+    # Test private key
+    ssh-keygen -y -f private_key.pem
+    
+    # Check key permissions
+    chmod 600 private_key.pem
+    
+    # Test SSH auth
+    ssh -i private_key.pem user@bastion
+    ```
+  </Tab>
+
+  <Tab title="Tunnel Fails">
+    Verify port forwarding:
+    ```bash
+    # Test manual SSH tunnel
+    ssh -L 5433:db.internal:5432 user@bastion
+    
+    # Connect via tunnel
+    psql -h localhost -p 5433 -U dbuser database
+    ```
+  </Tab>
+</Tabs>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Connection Overview" icon="plug" href="/connections/overview">
+    Learn about connection management
+  </Card>
+  <Card title="SSL/TLS Configuration" icon="lock" href="/connections/ssl-tls">
+    Encrypt database connections with SSL/TLS
+  </Card>
+</CardGroup>

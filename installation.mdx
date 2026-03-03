@@ -1,0 +1,254 @@
+---
+title: Installation
+description: Download and install Zequel on macOS, Windows, or Linux
+---
+
+Zequel is available as a native desktop application for macOS, Windows, and Linux. Download the appropriate installer for your platform and follow the installation instructions below.
+
+## Download
+
+Download the latest version of Zequel from the official website:
+
+<Card title="Download Zequel" icon="download" href="https://zequel.dev/download.html">
+  Get the latest version (v1.2.2) for your platform
+</Card>
+
+## macOS
+
+### System Requirements
+
+- macOS 10.13 (High Sierra) or later
+- Intel or Apple Silicon (M1/M2/M3) processor
+- 100 MB disk space
+
+### Installation Steps
+
+<Steps>
+  <Step title="Download the macOS installer">
+    Download `zequel-apple-{arch}.zip` for your architecture:
+    - Apple Silicon (M1/M2/M3): `zequel-apple-arm64.zip`
+    - Intel: `zequel-apple-x64.zip`
+  </Step>
+
+  <Step title="Extract the application">
+    Double-click the downloaded `.zip` file to extract `Zequel.app`
+  </Step>
+
+  <Step title="Move to Applications folder">
+    Drag `Zequel.app` to your `/Applications` folder
+  </Step>
+
+  <Step title="Open Zequel">
+    Launch Zequel from your Applications folder or Spotlight
+
+    <Note>
+      If you see a security warning, go to **System Preferences → Security & Privacy** and click "Open Anyway"
+    </Note>
+  </Step>
+</Steps>
+
+### File Associations
+
+Zequel automatically registers as a handler for:
+- `.sql` files (SQL scripts)
+- `.db`, `.sqlite`, `.sqlite3` files (SQLite databases)
+- `.duckdb`, `.ddb` files (DuckDB databases)
+
+You can double-click these files to open them directly in Zequel.
+
+### URL Schemes
+
+Zequel registers custom URL schemes for quick connections:
+- `postgresql://`, `postgres://`, `psql://`
+- `mysql://`
+- `mariadb://`
+- `mssql://`, `sqlserver://`
+- `mongodb://`, `mongodb+srv://`
+- `redis://`, `rediss://`
+- `clickhouse://`
+- `sqlite://`
+
+Click a database URL in any application to open it in Zequel.
+
+## Windows
+
+### System Requirements
+
+- Windows 10 or later
+- 64-bit processor
+- 150 MB disk space
+
+### Installation Steps
+
+<Steps>
+  <Step title="Download the Windows installer">
+    Download `zequel-window-{arch}.exe` for your architecture (typically `x64`)
+  </Step>
+
+  <Step title="Run the installer">
+    Double-click the downloaded `.exe` file to launch the installer
+  </Step>
+
+  <Step title="Choose installation location">
+    Select your preferred installation directory (default: `C:\Program Files\Zequel`)
+
+    <Note>
+      The installer allows you to customize the installation directory
+    </Note>
+  </Step>
+
+  <Step title="Complete installation">
+    Follow the installation wizard to complete the setup
+  </Step>
+
+  <Step title="Launch Zequel">
+    Open Zequel from the Start menu or desktop shortcut
+  </Step>
+</Steps>
+
+### File Associations
+
+The Windows installer automatically registers Zequel for:
+- `.sql` files (SQL scripts)
+- `.db`, `.sqlite`, `.sqlite3` files (SQLite databases)
+- `.duckdb`, `.ddb` files (DuckDB databases)
+
+### Credentials Storage
+
+Zequel uses the Windows Credential Manager to securely store database passwords. Credentials are encrypted and protected by Windows security.
+
+## Linux
+
+### System Requirements
+
+- Ubuntu 18.04+ / Debian 10+ / Fedora 32+ or equivalent
+- 64-bit processor
+- 150 MB disk space
+
+### Installation Steps
+
+<Steps>
+  <Step title="Download the Linux installer">
+    Download `zequel-linux-{arch}.AppImage` for your architecture (typically `x64`)
+  </Step>
+
+  <Step title="Make the AppImage executable">
+    Open a terminal and navigate to the download location:
+
+    ```bash
+    chmod +x zequel-linux-x64.AppImage
+    ```
+  </Step>
+
+  <Step title="Run Zequel">
+    Execute the AppImage:
+
+    ```bash
+    ./zequel-linux-x64.AppImage
+    ```
+
+    <Note>
+      AppImage files are portable and don't require installation. You can move the file anywhere and run it directly.
+    </Note>
+  </Step>
+
+  <Step title="Optional: Add to Application Menu">
+    To add Zequel to your application menu, right-click the AppImage icon and select "Integrate and run"
+  </Step>
+</Steps>
+
+### File Associations
+
+To associate file types with Zequel on Linux, create a desktop entry:
+
+```bash
+cat > ~/.local/share/applications/zequel.desktop <<EOF
+[Desktop Entry]
+Name=Zequel
+Exec=/path/to/zequel-linux-x64.AppImage %U
+Icon=zequel
+Type=Application
+Categories=Development;
+MimeType=application/sql;application/vnd.sqlite3;application/vnd.duckdb;
+EOF
+
+update-desktop-database ~/.local/share/applications
+```
+
+## Verification
+
+After installation, verify that Zequel is working correctly:
+
+<Steps>
+  <Step title="Launch the application">
+    Open Zequel from your applications menu or desktop
+  </Step>
+
+  <Step title="Check the version">
+    Click **Help → About Zequel** (or **Zequel → About Zequel** on macOS) to verify you have version 1.2.2 or later
+  </Step>
+
+  <Step title="Test a connection">
+    Try connecting to a local SQLite database to ensure the application is functioning properly
+  </Step>
+</Steps>
+
+## Auto-updates
+
+Zequel includes automatic update checking via electron-updater:
+
+- Updates are checked automatically when you launch the app
+- You'll be notified when a new version is available
+- Updates can be downloaded and installed with one click
+- No manual re-installation required
+
+<Note>
+  Auto-updates are currently available for macOS and Windows. Linux AppImage users should manually download new versions from the website.
+</Note>
+
+## Troubleshooting
+
+### macOS: "App is damaged and can't be opened"
+
+This security warning appears for unsigned applications. To resolve:
+
+```bash
+xattr -cr /Applications/Zequel.app
+```
+
+Then try opening Zequel again.
+
+### Windows: SmartScreen Warning
+
+Windows may show a SmartScreen warning for new applications. Click "More info" and then "Run anyway" to proceed.
+
+### Linux: Missing Dependencies
+
+If the AppImage fails to run, ensure you have the required libraries:
+
+```bash
+# Ubuntu/Debian
+sudo apt install libfuse2 libgtk-3-0
+
+# Fedora
+sudo dnf install fuse-libs gtk3
+```
+
+### Connection Issues
+
+If you can't connect to databases:
+- Verify that the database server is running and accessible
+- Check firewall settings for the database port
+- Ensure your database credentials are correct
+- For SSH tunnels, verify that SSH access is configured correctly
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Connect to your first database
+  </Card>
+  <Card title="Interface Overview" icon="layout" href="/interface-overview">
+    Learn about the UI components
+  </Card>
+</CardGroup>

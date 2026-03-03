@@ -1,0 +1,237 @@
+---
+title: 'PostgreSQL'
+description: 'Connect to and manage PostgreSQL databases'
+icon: 'database'
+---
+
+## Overview
+
+PostgreSQL is a powerful, open-source object-relational database system with over 35 years of active development. Zequel provides full support for PostgreSQL through the official `pg` driver (v8.13.1).
+
+## Supported Versions
+
+- PostgreSQL 10+
+- PostgreSQL 11+
+- PostgreSQL 12+
+- PostgreSQL 13+
+- PostgreSQL 14+
+- PostgreSQL 15+
+- PostgreSQL 16+
+
+## Connection
+
+### Basic Connection
+
+```
+Host: localhost
+Port: 5432
+Database: postgres
+Username: postgres
+Password: your_password
+```
+
+### Connection String Formats
+
+PostgreSQL accepts standard connection URLs:
+
+```
+postgresql://user:password@localhost:5432/database
+postgres://user:password@localhost/database
+psql://user:password@localhost:5432/database
+```
+
+### SSL/TLS Configuration
+
+Zequel supports all PostgreSQL SSL modes:
+
+- **Disable**: No SSL encryption
+- **Prefer**: Try SSL first, fallback to non-SSL
+- **Require**: Require SSL (don't verify certificates)
+- **Verify-CA**: Require SSL and verify certificate authority
+- **Verify-Full**: Require SSL and verify certificate authority and hostname
+
+<CodeGroup>
+```javascript SSL Configuration
+// SSL with custom certificates
+{
+  ssl: true,
+  sslConfig: {
+    mode: 'verify-full',
+    ca: fs.readFileSync('ca.pem'),
+    cert: fs.readFileSync('client-cert.pem'),
+    key: fs.readFileSync('client-key.pem')
+  }
+}
+```
+</CodeGroup>
+
+## Features
+
+### Schemas
+
+- Create, browse, and switch between schemas
+- Default schema: `public`
+- System schemas: `pg_catalog`, `information_schema`
+
+### Tables & Views
+
+- **Tables**: Full DDL support with CREATE, ALTER, DROP
+- **Views**: Create and manage standard views
+- **Materialized Views**: Create, refresh, and drop materialized views
+- **Table Comments**: Add descriptions to tables and columns
+
+### Data Types
+
+Zequel supports all PostgreSQL data types:
+
+<Tabs>
+  <Tab title="Numeric">
+    - SMALLINT, INTEGER, BIGINT
+    - DECIMAL, NUMERIC (with precision/scale)
+    - REAL, DOUBLE PRECISION
+    - SERIAL, BIGSERIAL
+  </Tab>
+  <Tab title="String">
+    - VARCHAR(n), CHAR(n)
+    - TEXT
+    - NAME
+  </Tab>
+  <Tab title="Date/Time">
+    - DATE
+    - TIME, TIMETZ
+    - TIMESTAMP, TIMESTAMPTZ
+    - INTERVAL
+  </Tab>
+  <Tab title="Other">
+    - BOOLEAN
+    - UUID
+    - JSON, JSONB
+    - ARRAY
+    - BYTEA (binary)
+    - INET, CIDR, MACADDR
+    - POINT, GEOMETRY
+  </Tab>
+</Tabs>
+
+### Indexes
+
+- **B-tree** (default)
+- **Hash**
+- **GiST** (Generalized Search Tree)
+- **GIN** (Generalized Inverted Index)
+- **BRIN** (Block Range Index)
+- Unique and multi-column indexes
+- Partial indexes with WHERE clauses
+
+### Constraints
+
+- Primary keys (single and composite)
+- Foreign keys with ON UPDATE/ON DELETE actions
+- Unique constraints
+- Check constraints
+- NOT NULL constraints
+
+### Sequences
+
+- Create and manage sequences
+- Auto-increment columns using SERIAL/BIGSERIAL
+- Custom sequence definitions with START, INCREMENT, MINVALUE, MAXVALUE
+- CYCLE and CACHE options
+
+### Extensions
+
+Manage PostgreSQL extensions:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "hstore";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+```
+
+### Stored Procedures & Functions
+
+- View and execute functions and procedures
+- Support for PL/pgSQL, SQL, and other languages
+- Parameter modes: IN, OUT, INOUT
+- Return types including SETOF and TABLE
+
+### Triggers
+
+- BEFORE and AFTER triggers
+- FOR EACH ROW and FOR EACH STATEMENT
+- Trigger events: INSERT, UPDATE, DELETE, TRUNCATE
+
+### Users & Roles
+
+- Create and manage database users
+- Role attributes: SUPERUSER, CREATEDB, CREATEROLE, LOGIN
+- Password management
+- Connection limits and expiration dates
+
+### Enum Types
+
+View and manage custom enum types:
+
+```sql
+CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+```
+
+## Advanced Features
+
+### Transactions
+
+Full ACID transaction support:
+
+```sql
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+COMMIT;
+```
+
+### Query Streaming
+
+Zequel uses server-side cursors for large result sets, preventing memory issues when querying millions of rows.
+
+### Query Cancellation
+
+Active queries can be cancelled using `pg_cancel_backend()`.
+
+## Limitations
+
+<Warning>
+  - Zequel displays table and column comments but advanced constraint editing may require raw SQL
+  - Some PostgreSQL-specific types (like custom composite types) are displayed as-is without specialized editing UI
+</Warning>
+
+## Docker Development
+
+Zequel includes a Docker Compose configuration with PostgreSQL:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+The seed database includes:
+- Tables with various data types
+- Views and materialized views
+- Functions and procedures
+- Triggers and sequences
+- Foreign key relationships
+- Extensions (uuid-ossp, pg_trgm)
+
+## Best Practices
+
+1. **Use schemas** to organize related tables
+2. **Enable SSL** for production connections
+3. **Use connection pooling** for better performance (handled automatically)
+4. **Set appropriate timeouts** for long-running queries
+5. **Use EXPLAIN ANALYZE** to optimize query performance

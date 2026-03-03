@@ -1,0 +1,440 @@
+---
+title: 'ClickHouse'
+description: 'Connect to and manage ClickHouse databases'
+icon: 'chart-line'
+---
+
+## Overview
+
+ClickHouse is a column-oriented database for real-time analytical queries on large datasets. It provides blazing-fast aggregations and can handle billions of rows. Zequel supports ClickHouse through the official `@clickhouse/client` driver (v1.16.0).
+
+## Supported Versions
+
+- ClickHouse 21.x
+- ClickHouse 22.x
+- ClickHouse 23.x
+- ClickHouse 24.x
+
+## Connection
+
+### HTTP/HTTPS Connection
+
+ClickHouse uses HTTP interface for client connections:
+
+```
+Host: localhost
+Port: 8123 (HTTP) or 8443 (HTTPS)
+Database: default
+Username: default
+Password: (optional)
+```
+
+### Connection URL
+
+Zequel constructs URLs automatically:
+
+```
+http://default:password@localhost:8123
+https://default:password@localhost:8443
+```
+
+### SSL/TLS Configuration
+
+ClickHouse supports HTTPS connections:
+
+```javascript
+{
+  host: 'localhost',
+  port: 8443,
+  ssl: true,
+  sslConfig: {
+    rejectUnauthorized: true
+  }
+}
+```
+
+## Features
+
+### Databases & Tables
+
+- Create and drop databases
+- Create, rename, and drop tables
+- Table comments and metadata
+- View table statistics (rows, bytes, compression)
+
+### Table Engines
+
+ClickHouse requires specifying a table engine:
+
+#### MergeTree Family (Most Common)
+
+```sql
+CREATE TABLE events (
+  id UInt64,
+  user_id UInt32,
+  event_time DateTime,
+  event_type String
+)
+ENGINE = MergeTree()
+ORDER BY (user_id, event_time)
+PRIMARY KEY (user_id);
+```
+
+- **MergeTree**: General-purpose engine
+- **ReplacingMergeTree**: Deduplication on merge
+- **SummingMergeTree**: Auto-sum numeric columns
+- **AggregatingMergeTree**: Pre-aggregation
+- **CollapsingMergeTree**: Row cancellation
+
+#### Other Engines
+
+- **Log**: Simple append-only tables
+- **Memory**: In-memory storage
+- **Distributed**: Sharded across cluster
+- **Kafka**: Read from Kafka topics
+- **File**: Query external files
+
+### Data Types
+
+ClickHouse provides specialized analytical types:
+
+<Tabs>
+  <Tab title="Integers">
+    - Int8, Int16, Int32, Int64, Int128, Int256
+    - UInt8, UInt16, UInt32, UInt64, UInt128, UInt256
+  </Tab>
+  <Tab title="Floating Point">
+    - Float32, Float64
+    - Decimal, Decimal32, Decimal64, Decimal128
+  </Tab>
+  <Tab title="String">
+    - String (unlimited length)
+    - FixedString(N) (fixed length)
+  </Tab>
+  <Tab title="Date/Time">
+    - Date (day precision)
+    - Date32 (extended range)
+    - DateTime (second precision)
+    - DateTime64 (subsecond precision)
+  </Tab>
+  <Tab title="Complex Types">
+    - Array(T)
+    - Map(K, V)
+    - Tuple(T1, T2, ...)
+    - Nested (deprecated, use Array(Tuple))
+  </Tab>
+  <Tab title="Other">
+    - Bool
+    - UUID
+    - IPv4, IPv6
+    - Enum8, Enum16
+    - JSON (experimental)
+    - Nullable(T) - allows NULL values
+    - LowCardinality(T) - dictionary encoding
+  </Tab>
+</Tabs>
+
+### Nullable Types
+
+ClickHouse requires explicit Nullable wrapper:
+
+```sql
+CREATE TABLE users (
+  id UInt64,
+  name String,
+  email Nullable(String),  -- Can be NULL
+  age UInt8                 -- Cannot be NULL
+)
+ENGINE = MergeTree()
+ORDER BY id;
+```
+
+### Indexes
+
+#### Primary Key / ORDER BY
+
+The ORDER BY clause determines data layout:
+
+```sql
+CREATE TABLE logs (
+  timestamp DateTime,
+  user_id UInt32,
+  message String
+)
+ENGINE = MergeTree()
+ORDER BY (user_id, timestamp)     -- Data sorted by these columns
+PRIMARY KEY (user_id);              -- Sparse index on user_id
+```
+
+#### Data-Skipping Indexes
+
+Secondary indexes for query optimization:
+
+```sql
+-- Create table with data-skipping index
+CREATE TABLE events (
+  event_time DateTime,
+  user_id UInt32,
+  event_type String,
+  INDEX idx_event_type event_type TYPE bloom_filter GRANULARITY 4
+)
+ENGINE = MergeTree()
+ORDER BY event_time;
+
+-- Add index to existing table
+ALTER TABLE events ADD INDEX idx_user user_id TYPE minmax GRANULARITY 4;
+```
+
+Index types:
+- `minmax`: Min/max values per granule
+- `set`: Unique values per granule
+- `bloom_filter`: Bloom filter for string matching
+- `tokenbf_v1`: Token bloom filter for text search
+- `ngrambf_v1`: N-gram bloom filter
+
+### Partitions
+
+Partition tables by date, month, or custom expression:
+
+```sql
+CREATE TABLE events (
+  event_date Date,
+  user_id UInt32,
+  event_type String
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_date)  -- Monthly partitions
+ORDER BY (user_id, event_date);
+
+-- Drop old partitions
+ALTER TABLE events DROP PARTITION '202301';
+```
+
+View partitions:
+```sql
+SELECT 
+  partition,
+  name,
+  rows,
+  bytes_on_disk
+FROM system.parts
+WHERE table = 'events' AND active;
+```
+
+### Materialized Views
+
+Pre-compute aggregations for fast queries:
+
+```sql
+-- Create target table for aggregated data
+CREATE TABLE daily_stats (
+  event_date Date,
+  user_id UInt32,
+  event_count UInt64
+)
+ENGINE = SummingMergeTree()
+ORDER BY (event_date, user_id);
+
+-- Create materialized view that populates target
+CREATE MATERIALIZED VIEW daily_stats_mv TO daily_stats
+AS SELECT
+  toDate(event_time) as event_date,
+  user_id,
+  count() as event_count
+FROM events
+GROUP BY event_date, user_id;
+```
+
+## ClickHouse-Specific Features
+
+### ALTER TABLE Operations
+
+ClickHouse uses ALTER TABLE for data modifications:
+
+```sql
+-- Update rows (asynchronous)
+ALTER TABLE events UPDATE event_type = 'click' WHERE event_type = 'view';
+
+-- Delete rows (asynchronous)
+ALTER TABLE events DELETE WHERE event_time < '2024-01-01';
+```
+
+<Warning>
+UPDATE and DELETE in ClickHouse are asynchronous and may take time to complete. Use lightweight DELETE for immediate effect (ClickHouse 23.3+).
+</Warning>
+
+### User-Defined Functions
+
+Create custom functions:
+
+```sql
+CREATE FUNCTION add_one AS (x) -> x + 1;
+
+SELECT add_one(5); -- Returns 6
+```
+
+### Distributed Tables
+
+Query data across multiple nodes:
+
+```sql
+CREATE TABLE events_distributed AS events
+ENGINE = Distributed(cluster_name, database, events, rand());
+```
+
+### Array Functions
+
+Powerful array manipulation:
+
+```sql
+SELECT 
+  arrayMap(x -> x * 2, [1, 2, 3]) as doubled,
+  arrayFilter(x -> x > 2, [1, 2, 3, 4]) as filtered,
+  arrayReduce('sum', [1, 2, 3, 4]) as total;
+```
+
+## Query Optimization
+
+### Best Practices
+
+1. **Use the right ORDER BY**
+   ```sql
+   -- Queries filtered by user_id and date are fast
+   ORDER BY (user_id, event_date)
+   ```
+
+2. **Leverage partitions**
+   ```sql
+   -- Only scans relevant partitions
+   SELECT * FROM events WHERE event_date >= '2024-01-01';
+   ```
+
+3. **Use LowCardinality for enum-like columns**
+   ```sql
+   event_type LowCardinality(String)
+   ```
+
+4. **Avoid SELECT ***
+   ```sql
+   -- Faster - only reads needed columns
+   SELECT user_id, count() FROM events GROUP BY user_id;
+   ```
+
+5. **Use PREWHERE for filtering**
+   ```sql
+   -- Filter before reading other columns
+   SELECT * FROM events PREWHERE event_date = today() WHERE event_type = 'click';
+   ```
+
+### Query Profiling
+
+```sql
+-- Analyze query execution
+EXPLAIN SELECT count() FROM events WHERE user_id = 123;
+
+-- View query statistics
+SELECT * FROM system.query_log WHERE type = 'QueryFinish' ORDER BY event_time DESC LIMIT 10;
+```
+
+## Limitations
+
+<Warning>
+ClickHouse is designed for analytics, not transactions:
+</Warning>
+
+- **No foreign key constraints**: ClickHouse doesn't enforce referential integrity
+- **No triggers**: Not supported
+- **No stored procedures**: Use user-defined functions instead
+- **Limited UPDATE/DELETE**: Asynchronous and expensive
+- **No multi-row transactions**: Each INSERT is independent
+- **No ALTER COLUMN type**: Must recreate table
+
+## Performance Features
+
+### Parallel Query Execution
+
+Automatic parallelization across CPU cores:
+
+```sql
+SET max_threads = 8;  -- Use 8 threads for queries
+```
+
+### Compression
+
+Automatic data compression (typically 10-30x):
+
+```sql
+-- View compression ratio
+SELECT 
+  table,
+  formatReadableSize(sum(data_compressed_bytes)) as compressed,
+  formatReadableSize(sum(data_uncompressed_bytes)) as uncompressed,
+  round(sum(data_uncompressed_bytes) / sum(data_compressed_bytes), 2) as ratio
+FROM system.parts
+WHERE active
+GROUP BY table;
+```
+
+### Query Cancellation
+
+Zequel can cancel running queries using AbortController.
+
+## Docker Development
+
+Zequel includes ClickHouse in Docker Compose:
+
+```yaml
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./docker/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+The seed database includes:
+- Tables with MergeTree engine
+- Partitioned tables
+- Materialized views
+- Data-skipping indexes
+- Sample analytical data
+
+## Use Cases
+
+### Ideal For:
+
+✅ Real-time analytics dashboards
+✅ Log aggregation and analysis
+✅ Time-series data
+✅ Event tracking and metrics
+✅ Data warehousing
+✅ High-throughput data ingestion
+✅ Columnar data analysis
+
+### Not Ideal For:
+
+❌ OLTP (transactional workloads)
+❌ Frequent updates/deletes
+❌ Small datasets (< 1M rows)
+❌ Point queries on individual records
+❌ Strong consistency requirements
+
+## Best Practices
+
+1. **Choose appropriate table engine** (usually MergeTree)
+2. **Design ORDER BY based on query patterns**
+3. **Use partitions** for time-series data
+4. **Leverage materialized views** for common aggregations
+5. **Use LowCardinality** for low-cardinality strings
+6. **Avoid Nullable** types when possible (slower and use more space)
+7. **Batch inserts** for better performance
+8. **Monitor system.query_log** for slow queries
+
+## Additional Resources
+
+- [ClickHouse Documentation](https://clickhouse.com/docs/)
+- [Table Engines](https://clickhouse.com/docs/en/engines/table-engines/)
+- [Data Types](https://clickhouse.com/docs/en/sql-reference/data-types/)
+- [Query Optimization](https://clickhouse.com/docs/en/guides/improving-query-performance/)

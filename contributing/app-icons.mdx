@@ -1,0 +1,165 @@
+---
+title: App Icons
+description: How to generate application icons for all platforms
+---
+
+Zequel uses a single source icon to generate platform-specific icon files for macOS, Windows, and Linux.
+
+## Source Icon
+
+The master icon is located at:
+
+```
+resources/icon-1024.png
+```
+
+This is a **1024x1024 PNG** file that serves as the source for all generated icons.
+
+## Icon Structure
+
+Generated icons are stored in the `build/icons/` directory:
+
+```
+build/icons/
+├── 1024x1024.png
+├── 512x512.png
+├── 256x256.png
+├── 128x128.png
+├── 64x64.png
+├── 48x48.png
+├── 32x32.png
+├── 24x24.png
+├── 16x16.png
+├── icon.icns          # macOS icon bundle
+├── icon.ico           # Windows icon
+├── mac/
+│   └── icon.icns
+├── win/
+│   └── icon.ico
+└── png/
+    └── (all PNG sizes)
+```
+
+## Generating Icons
+
+<Steps>
+  <Step title="Prepare the source icon">
+    Update or replace `resources/icon-1024.png` with your new icon.
+
+    <Note>
+    The source icon must be:
+    - **1024x1024 pixels**
+    - **PNG format**
+    - High quality (no compression artifacts)
+    </Note>
+  </Step>
+
+  <Step title="Run the icon builder">
+    ```bash
+    npx electron-icon-builder --input resources/icon-1024.png --output build
+    ```
+
+    This command:
+    1. Reads `resources/icon-1024.png`
+    2. Generates all required PNG sizes (16x16 through 1024x1024)
+    3. Creates `build/icons/icon.icns` for macOS
+    4. Creates `build/icons/icon.ico` for Windows
+    5. Organizes icons into platform-specific directories
+  </Step>
+
+  <Step title="Verify the output">
+    Check that icons were generated correctly:
+
+    ```bash
+    ls -R build/icons/
+    ```
+
+    You should see all PNG sizes plus the `.icns` and `.ico` files.
+  </Step>
+</Steps>
+
+## Icon Requirements by Platform
+
+### macOS (`.icns`)
+
+The macOS icon bundle includes multiple resolutions for Retina displays:
+- 16x16, 32x32, 64x64, 128x128, 256x256, 512x512, 1024x1024
+- Both 1x and 2x variants for each size
+
+### Windows (`.ico`)
+
+The Windows icon file includes:
+- 16x16, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256
+
+### Linux
+
+Linux uses individual PNG files at various sizes, referenced in the AppImage.
+
+## Build Configuration
+
+The `package.json` build configuration specifies icon paths:
+
+```json
+{
+  "build": {
+    "icon": "build/icons",
+    "mac": {
+      "icon": "build/icons/mac/icon.icns"
+    },
+    "win": {
+      "icon": "build/icons/win/icon.ico"
+    }
+  }
+}
+```
+
+Electron Builder automatically selects the appropriate icon format during the build process.
+
+## Design Guidelines
+
+<Warning>
+When designing the source icon:
+- Use a **transparent background** or ensure the background works in both light and dark modes
+- Keep the design **simple and recognizable** at small sizes (16x16)
+- Avoid fine details that may blur at smaller resolutions
+- Test the icon on both light and dark backgrounds
+</Warning>
+
+## Testing Icons Locally
+
+To preview icons in a local build:
+
+```bash
+npm run build:unpack
+```
+
+This builds the app without packaging and outputs to `dist/<platform>-unpacked/`, where you can inspect the generated app bundle with your new icons.
+
+### Preview on macOS
+
+```bash
+open dist/mac-arm64/Zequel.app
+```
+
+### Preview on Windows
+
+```bash
+start dist/win-unpacked/Zequel.exe
+```
+
+### Preview on Linux
+
+```bash
+./dist/linux-unpacked/zequel
+```
+
+## Manual Icon Updates
+
+If you need to manually update a specific platform icon without regenerating all icons:
+
+1. Replace the file in `build/icons/mac/` or `build/icons/win/`
+2. Rebuild with `npm run build:mac`, `npm run build:win`, or `npm run build:linux`
+
+<Note>
+Always keep `resources/icon-1024.png` as the source of truth. Manual edits to generated icons will be overwritten if you re-run `electron-icon-builder`.
+</Note>

@@ -1,0 +1,476 @@
+---
+title: 'Redis'
+description: 'Connect to and manage Redis databases'
+icon: 'bolt'
+---
+
+## Overview
+
+Redis is an in-memory key-value data store known for its blazing-fast performance. Zequel provides full support for Redis through the `ioredis` driver (v5.9.2).
+
+## Supported Versions
+
+- Redis 5.x
+- Redis 6.x
+- Redis 7.x
+- Redis Stack
+- Redis Cloud
+
+## Connection
+
+### Basic Connection
+
+```
+Host: localhost
+Port: 6379
+Database: 0 (0-15)
+Password: (optional)
+```
+
+### Connection Options
+
+Redis has 16 logical databases (0-15):
+
+```
+Database: db0, db1, db2, ... db15
+```
+
+### Authentication
+
+Redis 6+ supports usernames:
+
+```javascript
+{
+  host: 'localhost',
+  port: 6379,
+  username: 'default',  // Redis 6+
+  password: 'your_password'
+}
+```
+
+### SSL/TLS Connection
+
+Connect to Redis with TLS:
+
+```javascript
+{
+  host: 'redis.example.com',
+  port: 6380,
+  ssl: true,
+  sslConfig: {
+    rejectUnauthorized: true,
+    ca: fs.readFileSync('ca.pem')
+  }
+}
+```
+
+## Redis Commands
+
+Zequel supports all Redis commands through the query editor:
+
+### String Operations
+
+```redis
+SET mykey "Hello World"
+GET mykey
+INCR counter
+DECR counter
+APPEND mykey " - Appended"
+SETEX session:123 3600 "user_data"  # Expire in 1 hour
+```
+
+### Hash Operations
+
+```redis
+HSET user:1 name "Alice" age 30 email "alice@example.com"
+HGET user:1 name
+HGETALL user:1
+HINCRBY user:1 age 1
+HDEL user:1 email
+```
+
+### List Operations
+
+```redis
+LPUSH tasks "task1" "task2" "task3"
+RPUSH tasks "task4"
+LRANGE tasks 0 -1
+LPOP tasks
+RPOP tasks
+LLEN tasks
+```
+
+### Set Operations
+
+```redis
+SADD tags "redis" "database" "cache"
+SMEMBERS tags
+SISMEMBER tags "redis"
+SREM tags "cache"
+SCARD tags
+```
+
+### Sorted Set Operations
+
+```redis
+ZADD leaderboard 100 "player1" 200 "player2" 150 "player3"
+ZRANGE leaderboard 0 -1 WITHSCORES
+ZRANK leaderboard "player1"
+ZINCRBY leaderboard 10 "player1"
+ZREVRANGE leaderboard 0 2  # Top 3
+```
+
+### Key Management
+
+```redis
+KEYS *
+KEYS user:*
+EXISTS mykey
+DEL mykey
+EXPIRE mykey 60
+TTL mykey
+PERSIST mykey  # Remove expiration
+TYPE mykey
+```
+
+## Redis Data Structures
+
+<Tabs>
+  <Tab title="String">
+    Simple key-value pairs
+    ```redis
+    SET name "Alice"
+    GET name
+    ```
+    Max size: 512 MB
+  </Tab>
+  <Tab title="Hash">
+    Field-value pairs (like objects)
+    ```redis
+    HSET user:1 name "Alice" age 30
+    HGETALL user:1
+    ```
+    Max fields: 2^32 - 1
+  </Tab>
+  <Tab title="List">
+    Ordered collections (like arrays)
+    ```redis
+    LPUSH queue "task1" "task2"
+    RPOP queue
+    ```
+    Max items: 2^32 - 1
+  </Tab>
+  <Tab title="Set">
+    Unordered unique values
+    ```redis
+    SADD tags "redis" "cache"
+    SMEMBERS tags
+    ```
+    Max members: 2^32 - 1
+  </Tab>
+  <Tab title="Sorted Set">
+    Ordered by score
+    ```redis
+    ZADD scores 100 "Alice" 95 "Bob"
+    ZRANGE scores 0 -1
+    ```
+    Max members: 2^32 - 1
+  </Tab>
+  <Tab title="Stream">
+    Append-only log (Redis 5+)
+    ```redis
+    XADD events * user alice action login
+    XRANGE events - +
+    ```
+  </Tab>
+</Tabs>
+
+## Features
+
+### Databases
+
+Redis has 16 logical databases (db0 - db15):
+
+```redis
+SELECT 1    # Switch to db1
+DBSIZE      # Number of keys in current database
+FLUSHDB     # Delete all keys in current database
+FLUSHALL    # Delete all keys in all databases
+```
+
+### Key Patterns
+
+Zequel groups keys by prefix for easier navigation:
+
+- `user:*` - All user-related keys
+- `session:*` - All session keys
+- `cache:*` - All cache keys
+
+### Expiration (TTL)
+
+Set expiration times on keys:
+
+```redis
+SET cache:page "<html>..." EX 300     # Expire in 300 seconds
+EXPIRE cache:page 300                 # Set expiration
+TTL cache:page                        # Check remaining time
+PERSIST cache:page                    # Remove expiration
+```
+
+### Pub/Sub
+
+Publish and subscribe to channels:
+
+```redis
+# Terminal 1 - Subscribe
+SUBSCRIBE notifications
+
+# Terminal 2 - Publish
+PUBLISH notifications "Hello, subscribers!"
+```
+
+### Transactions
+
+Atomic execution of multiple commands:
+
+```redis
+MULTI
+SET key1 "value1"
+SET key2 "value2"
+INCR counter
+EXEC
+```
+
+### Lua Scripting
+
+Execute custom Lua scripts atomically:
+
+```redis
+EVAL "return redis.call('SET', KEYS[1], ARGV[1])" 1 mykey myvalue
+```
+
+## Redis-Specific Features
+
+### Persistence
+
+Redis offers two persistence modes:
+
+- **RDB**: Periodic snapshots
+- **AOF**: Append-only file (every write)
+
+```redis
+# Check persistence config
+CONFIG GET save
+CONFIG GET appendonly
+
+# Manual snapshot
+SAVE
+BGSAVE  # Background save
+```
+
+### Memory Management
+
+```redis
+# Memory info
+INFO memory
+MEMORY USAGE mykey
+
+# Eviction policies
+CONFIG GET maxmemory-policy
+# Options: noeviction, allkeys-lru, volatile-lru, etc.
+```
+
+### Replication
+
+```redis
+# On replica
+REPLICOF master-host master-port
+
+# Check replication status
+INFO replication
+```
+
+### Cluster
+
+Redis Cluster for horizontal scaling:
+
+```redis
+CLUSTER INFO
+CLUSTER NODES
+```
+
+### ACL (Access Control Lists - Redis 6+)
+
+Manage users and permissions:
+
+```redis
+ACL LIST
+ACL SETUSER alice on >password ~* &* +@all
+ACL DELUSER alice
+```
+
+Zequel provides UI for user management on Redis 6+.
+
+## Advanced Commands
+
+### Scanning Keys
+
+Zequel uses SCAN for non-blocking key iteration:
+
+```redis
+SCAN 0 MATCH user:* COUNT 100
+```
+
+<Note>
+Zequel automatically uses SCAN instead of KEYS to avoid blocking the server on large datasets.
+</Note>
+
+### Geo Commands (Geospatial)
+
+```redis
+GEOADD locations 13.361389 38.115556 "Palermo"
+GEOADD locations 15.087269 37.502669 "Catania"
+GEODIST locations "Palermo" "Catania" km
+GEORADIUS locations 15 37 200 km
+```
+
+### HyperLogLog (Cardinality Estimation)
+
+```redis
+PFADD visitors "user1" "user2" "user3"
+PFCOUNT visitors  # Approximate count
+```
+
+### Bitmap Operations
+
+```redis
+SETBIT online:2024-01-01 123 1  # User 123 was online
+GETBIT online:2024-01-01 123
+BITCOUNT online:2024-01-01
+```
+
+## Performance & Monitoring
+
+### Info Command
+
+```redis
+INFO
+INFO server
+INFO memory
+INFO stats
+INFO replication
+```
+
+### Slow Log
+
+```redis
+SLOWLOG GET 10  # Get last 10 slow commands
+SLOWLOG RESET
+```
+
+### Monitor
+
+```redis
+MONITOR  # Real-time command stream (use carefully!)
+```
+
+### Benchmarking
+
+```bash
+# From terminal
+redis-benchmark -h localhost -p 6379 -c 50 -n 10000
+```
+
+## Limitations
+
+<Warning>
+Redis is an in-memory store with some constraints:
+</Warning>
+
+- **Memory-bound**: All data must fit in RAM
+- **No complex queries**: No SQL-like joins or aggregations
+- **No foreign keys**: Relationships managed in application code
+- **No transactions across databases**: MULTI/EXEC works within one database
+- **Single-threaded** (mostly): One command at a time per core
+
+## Use Cases
+
+### Ideal For:
+
+✅ Caching (session storage, API responses)
+✅ Real-time analytics (counters, metrics)
+✅ Leaderboards (sorted sets)
+✅ Pub/Sub messaging
+✅ Rate limiting
+✅ Job queues
+✅ Geospatial data
+
+### Not Ideal For:
+
+❌ Primary data storage (use with persistence)
+❌ Complex queries and joins
+❌ Large datasets that don't fit in RAM
+❌ Full-text search (use RediSearch module)
+
+## Best Practices
+
+1. **Use key naming conventions**
+   ```
+   user:1:profile
+   user:1:sessions
+   cache:page:home
+   ```
+
+2. **Set expiration on cache keys**
+   ```redis
+   SETEX cache:api:users 3600 "[...]"
+   ```
+
+3. **Use pipelining for bulk operations**
+   ```javascript
+   const pipeline = redis.pipeline();
+   pipeline.set('key1', 'value1');
+   pipeline.set('key2', 'value2');
+   await pipeline.exec();
+   ```
+
+4. **Monitor memory usage**
+   ```redis
+   INFO memory
+   MEMORY DOCTOR
+   ```
+
+5. **Use appropriate data structures**
+   - Counters: Strings with INCR
+   - User sessions: Hashes
+   - Queues: Lists
+   - Tags: Sets
+   - Leaderboards: Sorted Sets
+
+6. **Enable persistence for important data**
+   ```
+   # redis.conf
+   save 900 1      # Save after 900s if 1 key changed
+   appendonly yes  # Enable AOF
+   ```
+
+## Docker Development
+
+Zequel includes Redis in Docker Compose:
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass redis
+```
+
+## Additional Resources
+
+- [Redis Documentation](https://redis.io/docs/)
+- [Redis Commands Reference](https://redis.io/commands/)
+- [Redis Data Types](https://redis.io/docs/data-types/)
+- [Redis Persistence](https://redis.io/docs/management/persistence/)
+- [Redis Best Practices](https://redis.io/docs/management/optimization/)

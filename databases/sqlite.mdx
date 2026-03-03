@@ -1,0 +1,330 @@
+---
+title: 'SQLite'
+description: 'Connect to and manage SQLite databases'
+icon: 'hard-drive'
+---
+
+## Overview
+
+SQLite is a self-contained, serverless, zero-configuration SQL database engine. Zequel provides full support for SQLite through the `better-sqlite3` driver (v11.6.0).
+
+## Supported Versions
+
+- SQLite 3.25+
+- SQLite 3.35+
+- SQLite 3.40+
+- SQLite 3.44+
+- SQLite 3.45+
+
+## Connection
+
+### File-Based Connection
+
+SQLite databases are single files:
+
+```
+File Path: /path/to/database.db
+```
+
+Common file extensions:
+- `.db`
+- `.sqlite`
+- `.sqlite3`
+- `.db3`
+
+<CodeGroup>
+```javascript Connection Example
+{
+  filepath: '/Users/username/data/myapp.db',
+  // or
+  filepath: ':memory:' // In-memory database
+}
+```
+</CodeGroup>
+
+### In-Memory Databases
+
+Create temporary databases that exist only in RAM:
+
+```
+File Path: :memory:
+```
+
+<Note>
+In-memory databases are destroyed when the connection closes. They're useful for testing and temporary data processing.
+</Note>
+
+## Features
+
+### Tables & Views
+
+- Create, alter, and drop tables
+- Create and drop views
+- Table and column metadata
+- No table comments (not supported by SQLite)
+
+### Data Types
+
+SQLite uses dynamic typing with type affinity:
+
+<Tabs>
+  <Tab title="Storage Classes">
+    - NULL
+    - INTEGER
+    - REAL
+    - TEXT
+    - BLOB
+  </Tab>
+  <Tab title="Type Affinities">
+    - INTEGER
+    - TEXT
+    - NUMERIC
+    - REAL
+    - BLOB
+  </Tab>
+  <Tab title="Common Types">
+    - INT, INTEGER, BIGINT
+    - REAL, DOUBLE, FLOAT
+    - TEXT, VARCHAR, CHAR
+    - BLOB
+    - NUMERIC, DECIMAL
+    - BOOLEAN (stored as 0/1)
+    - DATE, DATETIME (stored as TEXT or INTEGER)
+  </Tab>
+</Tabs>
+
+<Note>
+SQLite accepts any type name but converts it to one of the five storage classes based on affinity rules.
+</Note>
+
+### Indexes
+
+- Create unique and non-unique indexes
+- Multi-column indexes
+- Partial indexes with WHERE clause
+- Drop indexes
+
+```sql
+CREATE INDEX idx_users_email ON users(email);
+CREATE UNIQUE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_active_users ON users(status) WHERE status = 'active';
+```
+
+### Constraints
+
+- **Primary keys**: Single or composite
+- **Foreign keys**: WITH referential actions (must enable with PRAGMA)
+- **Unique constraints**
+- **NOT NULL constraints**
+- **CHECK constraints**
+- **DEFAULT values**
+
+```sql
+PRAGMA foreign_keys = ON;  -- Enable foreign key support
+
+CREATE TABLE orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  total REAL CHECK(total >= 0),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### Auto-Increment
+
+SQLite provides AUTOINCREMENT for INTEGER PRIMARY KEY:
+
+```sql
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL
+);
+```
+
+### Triggers
+
+- **Timing**: BEFORE, AFTER, INSTEAD OF
+- **Events**: INSERT, UPDATE, DELETE
+- **Scope**: FOR EACH ROW
+- **Conditions**: Optional WHEN clause
+
+```sql
+CREATE TRIGGER update_timestamp
+AFTER UPDATE ON users
+FOR EACH ROW
+BEGIN
+  UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+```
+
+### Transactions
+
+Full ACID transaction support:
+
+```sql
+BEGIN TRANSACTION;
+INSERT INTO accounts (name, balance) VALUES ('Alice', 1000);
+INSERT INTO transactions (account_id, amount) VALUES (1, 1000);
+COMMIT;
+```
+
+## SQLite-Specific Features
+
+### PRAGMA Statements
+
+Configure database settings:
+
+```sql
+PRAGMA journal_mode = WAL;           -- Write-Ahead Logging
+PRAGMA foreign_keys = ON;            -- Enable foreign keys
+PRAGMA synchronous = NORMAL;         -- Sync mode
+PRAGMA cache_size = -64000;          -- Cache size in KB
+PRAGMA temp_store = MEMORY;          -- Store temp tables in RAM
+```
+
+Zequel automatically sets `journal_mode = WAL` for better concurrency.
+
+### JSON Support (SQLite 3.38+)
+
+Query and manipulate JSON data:
+
+```sql
+SELECT json_extract(data, '$.name') FROM users;
+SELECT * FROM users WHERE json_extract(data, '$.active') = 1;
+```
+
+### Full-Text Search (FTS5)
+
+Create full-text search indexes:
+
+```sql
+CREATE VIRTUAL TABLE articles_fts USING fts5(title, content);
+INSERT INTO articles_fts SELECT title, content FROM articles;
+SELECT * FROM articles_fts WHERE articles_fts MATCH 'database';
+```
+
+### Attached Databases
+
+Attach multiple database files:
+
+```sql
+ATTACH DATABASE '/path/to/other.db' AS other;
+SELECT * FROM other.users;
+```
+
+## Limitations
+
+<Warning>
+SQLite has some limitations compared to client-server databases:
+</Warning>
+
+### Schema Limitations
+
+- **No ALTER COLUMN**: Cannot modify column type or constraints
+  - **Workaround**: Create new table, copy data, drop old table, rename
+  - Zequel automates this process for you
+- **No DROP COLUMN** (before 3.35.0)
+  - SQLite 3.35+ supports DROP COLUMN
+- **Limited ALTER TABLE**: Cannot add PRIMARY KEY, UNIQUE, or FOREIGN KEY after table creation
+- **No stored procedures or functions**: SQLite doesn't support user-defined routines
+- **No user management**: File-based permissions only
+
+### Concurrency Limitations
+
+- **Single writer**: Only one write transaction at a time
+- **Multiple readers**: Many concurrent reads allowed (especially with WAL mode)
+- **No parallel queries**: Single-threaded execution
+
+<Note>
+WAL (Write-Ahead Logging) mode significantly improves concurrency by allowing reads during writes.
+</Note>
+
+### Data Type Limitations
+
+- No native DATE/TIME types (stored as TEXT or INTEGER)
+- No native BOOLEAN type (stored as 0/1)
+- Dynamic typing can lead to type confusion
+
+## Best Practices
+
+1. **Enable WAL mode** for better concurrency
+   ```sql
+   PRAGMA journal_mode = WAL;
+   ```
+
+2. **Enable foreign keys** if you use them
+   ```sql
+   PRAGMA foreign_keys = ON;
+   ```
+
+3. **Use transactions** for multiple operations
+   ```sql
+   BEGIN;
+   -- multiple operations
+   COMMIT;
+   ```
+
+4. **Regular VACUUM** to reclaim space
+   ```sql
+   VACUUM;
+   ```
+
+5. **Use AUTOINCREMENT** sparingly
+   - Regular INTEGER PRIMARY KEY is faster
+   - Only use AUTOINCREMENT if you need monotonic IDs
+
+6. **Optimize queries** with EXPLAIN QUERY PLAN
+   ```sql
+   EXPLAIN QUERY PLAN SELECT * FROM users WHERE email = 'test@example.com';
+   ```
+
+## File Associations
+
+Zequel automatically associates with SQLite database files:
+
+- `.db`
+- `.sqlite`
+- `.sqlite3`
+
+Double-click a SQLite file to open it in Zequel.
+
+## Docker Development
+
+Zequel includes a pre-built SQLite database for testing:
+
+```bash
+# Located at:
+./docker/sqlite/zequel.db
+
+# Regenerate from init.sql:
+rm docker/sqlite/zequel.db
+sqlite3 docker/sqlite/zequel.db < docker/sqlite/init.sql
+```
+
+The seed database includes:
+- Tables with various data types
+- Views and triggers
+- Indexes and constraints
+- Foreign key relationships
+- FTS5 full-text search table
+
+## Performance Tips
+
+1. **Create indexes** on frequently queried columns
+2. **Use prepared statements** for repeated queries
+3. **Batch inserts** in transactions (1000x faster)
+4. **Analyze tables** periodically
+   ```sql
+   ANALYZE;
+   ```
+5. **Set optimal cache size** based on available RAM
+   ```sql
+   PRAGMA cache_size = -64000;  -- 64MB
+   ```
+
+## Additional Resources
+
+- [SQLite Documentation](https://www.sqlite.org/docs.html)
+- [SQLite Data Types](https://www.sqlite.org/datatype3.html)
+- [SQLite WAL Mode](https://www.sqlite.org/wal.html)
+- [SQLite FTS5](https://www.sqlite.org/fts5.html)

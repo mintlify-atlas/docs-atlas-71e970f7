@@ -1,0 +1,624 @@
+---
+title: 'Testing Guide'
+description: 'Write and run unit, integration, and end-to-end tests'
+---
+
+Zequel uses a comprehensive testing strategy with three test types:
+
+- **Unit tests** - Fast, isolated tests with mocked dependencies
+- **Integration tests** - Tests against real databases via Docker
+- **E2E tests** - Full application tests with Playwright
+
+## Test Stack
+
+<CardGroup cols={3}>
+  <Card title="Vitest" icon="vial">
+    Unit and integration test runner with Vite integration
+  </Card>
+  <Card title="Playwright" icon="theater-masks">
+    End-to-end testing framework for Electron
+  </Card>
+  <Card title="Docker Compose" icon="docker">
+    Test database containers with seed data
+  </Card>
+</CardGroup>
+
+## Running Tests
+
+### Quick Commands
+
+<CodeGroup>
+```bash All Tests (Watch)
+npm run test
+# Runs unit + integration tests in watch mode
+# Re-runs on file changes
+```
+
+```bash Unit Tests Only
+npm run test:unit
+# Fast, no external dependencies
+# Required by pre-commit hook
+```
+
+```bash Integration Tests
+npm run test:integration
+# Requires Docker containers running
+# docker-compose up -d
+```
+
+```bash E2E Tests
+npm run test:e2e
+# Requires production build first
+# npm run build && npm run test:e2e
+```
+
+```bash Coverage Report
+npm run test:coverage
+# Generates coverage report
+# Output: coverage/index.html
+```
+
+```bash Interactive UI
+npm run test:ui
+# Opens Vitest UI in browser
+# Great for debugging tests
+```
+</CodeGroup>
+
+### Pre-commit Hook
+
+Husky runs these commands before each commit:
+
+```bash
+npm run typecheck  # Type-check all code
+npm run test:unit  # Run unit tests
+```
+
+Commits are blocked if either fails.
+
+## Unit Tests
+
+### Overview
+
+**Location**: `src/tests/unit/`
+
+**Characteristics**:
+- Fast (no I/O, no database connections)
+- Isolated (all dependencies mocked)
+- Run on every commit (pre-commit hook)
+- Mirror source structure:
+  - `unit/main/` - Main process tests
+  - `unit/renderer/` - Renderer process tests
+
+### Configuration
+
+**File**: `vitest.config.ts`
+
+```typescript
+export default defineConfig({
+  test: {
+    globals: true,              // No need to import describe, it, expect
+    environment: 'node',        // Node.js environment
+    include: ['src/tests/**/*.{test,spec}.{ts,mts,js,mjs}'],
+    exclude: ['node_modules', 'src/tests/e2e/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      exclude: ['node_modules/', 'src/tests/']
+    },
+    alias: {
+      '@': resolve(__dirname, './src/renderer'),
+      '@main': resolve(__dirname, './src/main')
+    }
+  }
+})
+```
+
+### Writing Unit Tests
+
+**Example**: Testing a service (main process)
+
+```typescript
+// src/tests/unit/main/connections.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { DatabaseType } from '@main/types';
+import type { ConnectionConfig } from '@main/types';
+
+// Mock dependencies
+vi.mock('@main/utils/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock database
+const mockPrepare = vi.fn(() => ({
+  run: vi.fn(() => ({ changes: 1 })),
+  get: vi.fn(),
+  all: vi.fn(() => []),
+}));
+
+vi.mock('@main/services/database', () => ({
+  appDatabase: {
+    getDatabase: vi.fn(() => ({
+      prepare: mockPrepare,
+    })),
+  },
+}));
+
+// Import after mocks
+import { ConnectionsService } from '@main/services/connections';
+
+describe('ConnectionsService', () => {
+  let service: ConnectionsService;
+  
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ConnectionsService();
+  });
+  
+  it('should save a connection', async () => {
+    const config: ConnectionConfig = {
+      id: 'test-1',
+      name: 'Test DB',
+      type: DatabaseType.PostgreSQL,
+      host: 'localhost',
+      port: 5432,
+      database: 'testdb',
+      username: 'user',
+    };
+    
+    await service.save(config);
+    
+    expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('INSERT'));
+  });
+  
+  it('should list connections', async () => {
+    const mockConnections = [
+      { id: '1', name: 'DB1', type: 'postgresql' },
+      { id: '2', name: 'DB2', type: 'mysql' },
+    ];
+    
+    mockPrepare.mockReturnValueOnce({
+      all: vi.fn(() => mockConnections),
+    });
+    
+    const result = await service.list();
+    
+    expect(result).toHaveLength(2);
+    expect(result[0].name).toBe('DB1');
+  });
+});
+```
+
+**Example**: Testing a composable (renderer)
+
+```typescript
+// src/tests/unit/renderer/formatters.test.ts
+import { describe, it, expect } from 'vitest';
+import { formatBytes, formatDuration } from '@/lib/formatters';
+
+describe('formatBytes', () => {
+  it('should format bytes correctly', () => {
+    expect(formatBytes(0)).toBe('0 B');
+    expect(formatBytes(1024)).toBe('1 KB');
+    expect(formatBytes(1024 * 1024)).toBe('1 MB');
+    expect(formatBytes(1024 * 1024 * 1024)).toBe('1 GB');
+  });
+});
+
+describe('formatDuration', () => {
+  it('should format milliseconds', () => {
+    expect(formatDuration(500)).toBe('500ms');
+    expect(formatDuration(1500)).toBe('1.50s');
+    expect(formatDuration(65000)).toBe('1m 5s');
+  });
+});
+```
+
+### Mocking Guidelines
+
+<AccordionGroup>
+  <Accordion title="Always mock external dependencies">
+    Mock file system, databases, network calls, and third-party libraries:
+    
+    ```typescript
+    vi.mock('@main/utils/logger');
+    vi.mock('@main/services/database');
+    vi.mock('fs/promises');
+    ```
+  </Accordion>
+  
+  <Accordion title="Mock before imports">
+    Mocks must be declared **before** importing the module under test:
+    
+    ```typescript
+    // Good
+    vi.mock('@main/utils/logger');
+    import { service } from '@main/services/myService';
+    
+    // Bad
+    import { service } from '@main/services/myService';
+    vi.mock('@main/utils/logger');  // Too late!
+    ```
+  </Accordion>
+  
+  <Accordion title="Clear mocks between tests">
+    Use `beforeEach(() => vi.clearAllMocks())` to reset mock state:
+    
+    ```typescript
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Integration Tests
+
+### Overview
+
+**Location**: `src/tests/integration/main/`
+
+**Characteristics**:
+- Connect to **real databases** via Docker
+- Verify seed data integrity
+- Test database-specific features
+- Gracefully skip when containers unavailable
+
+### Setup
+
+<Steps>
+  <Step title="Start Docker Containers">
+    ```bash
+    docker-compose up -d
+    ```
+    
+    Starts all database containers with seed data.
+  </Step>
+  
+  <Step title="Run Integration Tests">
+    ```bash
+    npm run test:integration
+    ```
+  </Step>
+</Steps>
+
+### Writing Integration Tests
+
+**Example**: Testing PostgreSQL seed data
+
+```typescript
+// src/tests/integration/main/postgres-seed.test.ts
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { PostgresDriver } from '@main/db/postgres';
+import { DatabaseType } from '@main/types';
+
+const config = {
+  id: 'test',
+  name: 'Test',
+  type: DatabaseType.PostgreSQL,
+  host: 'localhost',
+  port: 54320,
+  database: 'zequel',
+  username: 'zequel',
+  password: 'zequel',
+};
+
+describe('PostgreSQL seed data', () => {
+  let driver: PostgresDriver;
+  
+  beforeAll(async () => {
+    driver = new PostgresDriver();
+    try {
+      await driver.connect(config);
+    } catch (err) {
+      console.warn('PostgreSQL container not available, skipping tests');
+      return;
+    }
+  });
+  
+  afterAll(async () => {
+    if (driver?.isConnected) {
+      await driver.disconnect();
+    }
+  });
+  
+  it('should have seed tables', async () => {
+    if (!driver?.isConnected) return;
+    
+    const tables = await driver.getTables('zequel');
+    
+    expect(tables.find(t => t.name === 'users')).toBeDefined();
+    expect(tables.find(t => t.name === 'products')).toBeDefined();
+  });
+  
+  it('should have seed data in users table', async () => {
+    if (!driver?.isConnected) return;
+    
+    const result = await driver.execute('SELECT COUNT(*) as count FROM users');
+    
+    expect(Number(result.rows[0].count)).toBeGreaterThan(0);
+  });
+  
+  it('should have sequences', async () => {
+    if (!driver?.isConnected) return;
+    
+    const sequences = await driver.getSequences();
+    
+    expect(sequences.length).toBeGreaterThan(0);
+  });
+});
+```
+
+### Database Connection Details
+
+See [Development Setup - Database Ports](/contributing/development-setup#database-ports) for all connection details.
+
+### Skip Pattern
+
+Integration tests gracefully skip when Docker containers aren't running:
+
+```typescript
+beforeAll(async () => {
+  try {
+    await driver.connect(config);
+  } catch (err) {
+    console.warn('Database not available, skipping tests');
+    return;
+  }
+});
+
+it('should test feature', async () => {
+  if (!driver?.isConnected) return;  // Skip if not connected
+  
+  // Test logic...
+});
+```
+
+## End-to-End Tests
+
+### Overview
+
+**Location**: `src/tests/e2e/`
+
+**Characteristics**:
+- Test the **full Electron app** (main + renderer)
+- Playwright controls the application
+- Tests user workflows (connect, query, export, etc.)
+- Requires production build
+
+### Configuration
+
+**File**: `playwright.config.ts`
+
+```typescript
+export default defineConfig({
+  tsconfig: './tsconfig.e2e.json',
+  testDir: './src/tests/e2e/tests',
+  timeout: 60_000,
+  expect: { timeout: 30_000 },
+  fullyParallel: false,
+  workers: 1,
+  retries: 1,
+  reporter: 'list',
+  use: {
+    actionTimeout: 10_000,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+})
+```
+
+### Running E2E Tests
+
+<Steps>
+  <Step title="Build the App">
+    E2E tests require a production build:
+    
+    ```bash
+    npm run build
+    ```
+  </Step>
+  
+  <Step title="Run Tests">
+    ```bash
+    npm run test:e2e
+    
+    # Or run a specific test:
+    npx playwright test src/tests/e2e/tests/connection.test.ts
+    ```
+  </Step>
+</Steps>
+
+### Writing E2E Tests
+
+**Example**: Testing connection workflow
+
+```typescript
+// src/tests/e2e/tests/connection.test.ts
+import { test, expect } from '@playwright/test';
+import { launchApp } from '@e2e/utils/electron';
+
+test.describe('Connection Management', () => {
+  test('should create and connect to SQLite database', async () => {
+    const { app, page } = await launchApp();
+    
+    try {
+      // Click "New Connection" button
+      await page.click('button:has-text("New Connection")');
+      
+      // Fill connection form
+      await page.fill('input[name="name"]', 'Test SQLite');
+      await page.selectOption('select[name="type"]', 'sqlite');
+      await page.fill('input[name="filepath"]', '/tmp/test.db');
+      
+      // Save connection
+      await page.click('button:has-text("Save")');
+      
+      // Verify connection appears in list
+      await expect(page.locator('text=Test SQLite')).toBeVisible();
+      
+      // Connect
+      await page.click('button:has-text("Connect")');
+      
+      // Verify connected state
+      await expect(page.locator('.connection-status:has-text("Connected")')).toBeVisible();
+    } finally {
+      await app.close();
+    }
+  });
+});
+```
+
+### Helpers
+
+**Electron launcher** (`src/tests/e2e/utils/electron.ts`):
+
+```typescript
+import { _electron as electron } from '@playwright/test';
+
+export const launchApp = async () => {
+  const app = await electron.launch({
+    args: ['.'],
+    env: {
+      ...process.env,
+      E2E: '1',  // Prevent auto-showing windows
+    },
+  });
+  
+  const page = await app.firstWindow();
+  
+  return { app, page };
+};
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Behavior, Not Implementation" icon="eye">
+    Test what users see and do, not internal implementation details.
+  </Card>
+  
+  <Card title="Use Descriptive Test Names" icon="text">
+    `it('should display error when connection fails')` is better than `it('works')`.
+  </Card>
+  
+  <Card title="Keep Tests Independent" icon="puzzle-piece">
+    Each test should run in isolation. Use `beforeEach` for setup.
+  </Card>
+  
+  <Card title="Mock External Services" icon="cloud">
+    Don't depend on external APIs or services in unit tests.
+  </Card>
+  
+  <Card title="Test Edge Cases" icon="triangle-exclamation">
+    Test error conditions, empty states, and boundary values.
+  </Card>
+  
+  <Card title="Use AAA Pattern" icon="list-ol">
+    **Arrange** (setup), **Act** (execute), **Assert** (verify).
+  </Card>
+</CardGroup>
+
+## Coverage
+
+Generate coverage reports:
+
+```bash
+npm run test:coverage
+```
+
+**Output**: `coverage/index.html`
+
+Open in browser to see line-by-line coverage:
+
+```bash
+open coverage/index.html  # macOS
+xdg-open coverage/index.html  # Linux
+start coverage/index.html  # Windows
+```
+
+<Note>
+Coverage excludes `src/tests/` and `node_modules/` by default.
+</Note>
+
+## Debugging Tests
+
+### Vitest UI
+
+```bash
+npm run test:ui
+```
+
+Opens interactive UI at `http://localhost:51204` with:
+- Test file tree
+- Console output
+- Coverage visualization
+- Re-run on file save
+
+### Playwright Inspector
+
+```bash
+PWDEBUG=1 npx playwright test src/tests/e2e/tests/connection.test.ts
+```
+
+Opens Playwright Inspector for step-by-step debugging.
+
+### VS Code Debugging
+
+Add to `.vscode/launch.json`:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Vitest Tests",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:unit"],
+      "console": "integratedTerminal"
+    }
+  ]
+}
+```
+
+Set breakpoints and press F5 to debug.
+
+## Continuous Integration
+
+GitHub Actions runs tests on every PR:
+
+```yaml
+- name: Run type checking
+  run: npm run typecheck
+
+- name: Run unit tests
+  run: npm run test:unit
+
+- name: Run integration tests
+  run: |
+    docker-compose up -d
+    npm run test:integration
+
+- name: Build app
+  run: npm run build
+
+- name: Run E2E tests
+  run: npm run test:e2e
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Adapters" icon="database" href="/contributing/database-adapters">
+    Learn how to add support for new databases
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/contributing/project-structure">
+    Navigate the codebase
+  </Card>
+</CardGroup>

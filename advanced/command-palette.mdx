@@ -1,0 +1,276 @@
+---
+title: 'Command Palette'
+description: 'Quick navigation and search with the Command Palette'
+icon: 'terminal'
+---
+
+The Command Palette is Zequel's powerful quick-access tool for navigating your database schema, finding tables and columns, and opening saved queries. It provides fuzzy search across all your database objects.
+
+## Opening the Command Palette
+
+You can open the Command Palette using any of these shortcuts:
+
+- `Cmd/Ctrl+K` (most common)
+- `Cmd/Ctrl+P` (alternative)
+- `Cmd/Ctrl+Shift+P` (alternative)
+
+Or from the menu: **Tools → Search**
+
+<Tip>
+  The Command Palette is context-aware and only shows objects from your currently active database connection.
+</Tip>
+
+## What You Can Search
+
+The Command Palette searches across multiple object types:
+
+### Tables
+
+- All tables in the current database
+- Shows row count for each table
+- Displays as blue entries with table icon
+
+### Views
+
+- Database views and materialized views
+- Shows row count when available
+- Displays as purple entries with eye icon
+
+### Columns
+
+- All columns from all tables
+- Shows as `tableName.columnName (dataType)`
+- Displays as orange entries with columns icon
+
+### Saved Queries
+
+- Your saved SQL queries
+- Shows query name and preview of SQL
+- Displays as green entries with code icon
+
+### Recent Items
+
+- Recently accessed tables, views, and queries
+- Shown when search is empty
+- Displays as gray entries with history icon
+
+## Using the Command Palette
+
+### Basic Search
+
+1. Press `Cmd/Ctrl+K` to open the palette
+2. Start typing to search (e.g., "users", "order", "product")
+3. Results appear instantly as you type
+4. Press `↵ Enter` or click to open the selected item
+
+```
+Search: user
+
+Results:
+  📊 users           table - 1,234 rows
+  📊 user_sessions   table - 5,678 rows  
+  📋 username        users.username (varchar)
+  📋 user_id         orders.user_id (integer)
+```
+
+### Fuzzy Matching
+
+The search supports fuzzy matching, so you don't need to type the exact name:
+
+- `usr` matches `users`
+- `orddet` matches `order_details`
+- `prod` matches `products`, `product_categories`, etc.
+
+### Search Scope
+
+The palette searches in:
+
+- **Table names**: Primary match
+- **Column names**: Both column name and fully qualified name
+- **Column types**: Search by data type (e.g., "varchar", "integer")
+- **Query names**: Saved query titles
+- **Query SQL**: Content of saved queries
+
+<Note>
+  The search is case-insensitive and matches partial strings anywhere in the name.
+</Note>
+
+## Navigation
+
+### Keyboard Navigation
+
+| Key | Action |
+|-----|--------|
+| `↑` | Move selection up |
+| `↓` | Move selection down |
+| `↵ Enter` | Open selected item |
+| `Esc` | Close the palette |
+
+### Mouse Navigation
+
+- **Hover** over any item to select it
+- **Click** to open the item
+- **Scroll** through results if there are many
+
+## Opening Items
+
+When you select an item from the Command Palette:
+
+### Tables & Views
+
+- Opens the table/view in a new tab
+- Loads the first page of data (default: 100 rows)
+- Shows table structure and allows editing (if not in safe mode)
+
+### Columns
+
+- Opens the parent table
+- Focuses on the selected column
+- Useful for quickly navigating to specific fields
+
+### Saved Queries
+
+- Opens the query in a new SQL editor tab
+- Loads the saved SQL code
+- Ready to execute or modify
+
+### Recent Items
+
+- Reopens the recently accessed object
+- Restores your previous context
+
+## Recent Items
+
+When you open the Command Palette with an empty search, it shows your recently accessed items:
+
+- Last 10 items you've opened
+- Includes tables, views, and queries
+- Sorted by most recent first
+- Great for quickly switching between common objects
+
+<Accordion title="How Recent Items are Tracked">
+  Zequel automatically tracks items you open:
+  - Opening a table or view from the sidebar
+  - Selecting a result from the Command Palette
+  - Opening a saved query
+  - Creating a new query from a table
+
+  Recent items are stored per connection and persist across sessions.
+</Accordion>
+
+## Performance
+
+### Loading Schema Data
+
+When you first open the Command Palette:
+
+1. Zequel loads all tables and views from the current database
+2. For each table, it fetches column information
+3. It loads all saved queries for the connection
+4. Results are cached for the session
+
+You'll see a "Loading..." indicator while this happens.
+
+### Result Limits
+
+To maintain performance:
+
+- Maximum 50 results shown at once
+- Tables, views, and columns are all included in this limit
+- Most specific matches appear first
+
+<Tip>
+  If you don't see the item you're looking for, try being more specific with your search term.
+</Tip>
+
+## Use Cases
+
+### Quick Table Access
+
+```
+Scenario: You need to view the "customers" table
+
+1. Press Cmd/Ctrl+K
+2. Type "cust"
+3. Press Enter on "customers"
+```
+
+### Finding Columns
+
+```
+Scenario: You can't remember which table has the "email" column
+
+1. Press Cmd/Ctrl+K
+2. Type "email"
+3. See all tables with an email column
+4. Select the one you need
+```
+
+### Opening Saved Queries
+
+```
+Scenario: You want to run your "Monthly Sales Report" query
+
+1. Press Cmd/Ctrl+K
+2. Type "monthly"
+3. Select "Monthly Sales Report"
+4. Query opens in a new tab
+```
+
+### Switching Between Recent Items
+
+```
+Scenario: Switching between tables you're working on
+
+1. Press Cmd/Ctrl+K
+2. Don't type anything - see recent items
+3. Select from your recent history
+```
+
+## Tips & Tricks
+
+<Tip>
+  Use short, distinctive prefixes for faster searching. For example, "ord" for "orders" is faster than typing the full name.
+</Tip>
+
+<Tip>
+  The Command Palette is perfect for large databases where scrolling through the sidebar would take too long.
+</Tip>
+
+<Tip>
+  Combine with keyboard shortcuts: Open palette (`Cmd/Ctrl+K`), search, open table, then immediately press `Cmd/Ctrl+E` to create a query for that table.
+</Tip>
+
+<Warning>
+  The Command Palette only searches the currently active database. If you need to search across multiple databases, you'll need to switch databases first.
+</Warning>
+
+## Troubleshooting
+
+### No Results Found
+
+**Problem**: Search returns no results
+
+**Solutions**:
+- Ensure you're connected to a database
+- Check that you're searching in the correct database
+- Try a shorter or different search term
+- Verify the object actually exists in the schema
+
+### Loading Takes Too Long
+
+**Problem**: Command Palette shows "Loading..." for a long time
+
+**Solutions**:
+- This is normal for databases with thousands of tables/columns
+- After the first load, results are cached
+- Consider using the sidebar for very large schemas
+
+### Recent Items Not Showing
+
+**Problem**: Recent items list is empty
+
+**Solutions**:
+- Open a few tables/views first to populate the list
+- Recent items are stored per connection
+- Switching connections clears the recent list for that context

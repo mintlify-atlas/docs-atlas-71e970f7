@@ -1,0 +1,168 @@
+---
+title: 'Contributing Overview'
+description: 'Learn how to contribute to Zequel development'
+---
+
+Welcome to the Zequel contributor guide! Whether you're fixing bugs, adding features, or improving documentation, your contributions are appreciated.
+
+## Ways to Contribute
+
+<CardGroup cols={2}>
+  <Card title="Report Bugs" icon="bug">
+    Found an issue? Open a bug report on GitHub with steps to reproduce.
+  </Card>
+  <Card title="Suggest Features" icon="lightbulb">
+    Have an idea? Submit a feature request describing your use case.
+  </Card>
+  <Card title="Write Code" icon="code">
+    Fix bugs, add features, or improve performance with pull requests.
+  </Card>
+  <Card title="Improve Docs" icon="book">
+    Help others by improving documentation and guides.
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+<Steps>
+  <Step title="Fork and Clone">
+    Fork the [Zequel repository](https://github.com/zequel-labs/zequel) and clone it locally:
+    
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/zequel.git
+    cd zequel
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Install all required dependencies using npm:
+    
+    ```bash
+    npm install
+    ```
+    
+    This will also run `postinstall` to install Electron app dependencies.
+  </Step>
+  
+  <Step title="Start Development Server">
+    Launch the development server with hot reload:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    The app will open automatically with developer tools available.
+  </Step>
+  
+  <Step title="Make Your Changes">
+    Create a feature branch and start coding:
+    
+    ```bash
+    git checkout -b feat/my-feature
+    ```
+    
+    Follow the [project structure](/contributing/project-structure) and coding conventions.
+  </Step>
+  
+  <Step title="Test Your Changes">
+    Run type checking and tests before committing:
+    
+    ```bash
+    npm run typecheck
+    npm run test:unit
+    ```
+  </Step>
+  
+  <Step title="Submit a Pull Request">
+    Push your branch and open a PR against `main` with a clear description of your changes.
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Branch Strategy
+
+<Warning>
+  **Never commit directly to `main`**. Always create a feature or fix branch and open a pull request.
+</Warning>
+
+Branch naming conventions:
+- `feat/feature-name` - New features
+- `fix/bug-description` - Bug fixes
+- `chore/task-name` - Maintenance tasks
+- `docs/topic` - Documentation updates
+
+### Commit Guidelines
+
+Zequel uses **Conventional Commits** enforced by a Git hook:
+
+```bash
+# Format
+<type>(<scope>): <description>
+
+# Examples
+feat: add dark mode support
+fix(sidebar): resolve tree expand bug
+chore(deps): update electron to v33
+docs: improve connection guide
+```
+
+**Allowed types**: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`
+
+### Pre-commit Hooks
+
+Husky runs these checks before each commit:
+
+```bash
+npm run typecheck  # Type check main and renderer
+npm run test:unit  # Run unit tests
+```
+
+If checks fail, the commit will be rejected. Fix issues before committing.
+
+## Code Review Process
+
+<Steps>
+  <Step title="Automated Checks">
+    GitHub Actions will run tests and type checking on your PR.
+  </Step>
+  
+  <Step title="Maintainer Review">
+    A maintainer will review your code for quality and correctness.
+  </Step>
+  
+  <Step title="Address Feedback">
+    Make requested changes by pushing additional commits to your branch.
+  </Step>
+  
+  <Step title="Merge">
+    Once approved, a maintainer will merge your PR into `main`.
+  </Step>
+</Steps>
+
+## Getting Help
+
+- **Questions?** Open a [GitHub Discussion](https://github.com/zequel-labs/zequel/discussions)
+- **Bugs?** Search [existing issues](https://github.com/zequel-labs/zequel/issues) first
+- **Features?** Discuss your idea in an issue before starting work
+
+## Code of Conduct
+
+Be respectful, inclusive, and constructive in all interactions. We're building this together.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Development Setup" icon="wrench" href="/contributing/development-setup">
+    Set up your development environment
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/contributing/project-structure">
+    Learn the codebase organization
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/contributing/architecture">
+    Understand Electron architecture
+  </Card>
+  <Card title="Testing Guide" icon="flask" href="/contributing/testing">
+    Write and run tests
+  </Card>
+</CardGroup>

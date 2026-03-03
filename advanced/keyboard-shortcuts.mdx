@@ -1,0 +1,130 @@
+---
+title: 'Keyboard Shortcuts'
+description: 'Complete reference of keyboard shortcuts in Zequel'
+icon: 'keyboard'
+---
+
+Zequel provides extensive keyboard shortcuts to help you work efficiently. All shortcuts are platform-aware and work on both macOS and Windows/Linux.
+
+<Note>
+  On macOS, `Cmd` is used, while on Windows/Linux, `Ctrl` is used. The shortcuts below use `Cmd/Ctrl` to indicate this.
+</Note>
+
+## General
+
+These shortcuts are available throughout the application.
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+N` | New connection | Open the connection dialog to create a new database connection |
+| `Cmd/Ctrl+,` | Open settings | Access application settings |
+| `Cmd/Ctrl+Shift+?` or `F1` | Show keyboard shortcuts | Display the keyboard shortcuts dialog |
+| `Cmd/Ctrl+Shift+N` | New window | Open a new application window |
+
+## Navigation
+
+Quickly navigate and search within your database.
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+P` | Open command palette | Quick access to tables, views, columns, and saved queries |
+| `Cmd/Ctrl+K` | Open command palette | Alternative shortcut for command palette |
+| `Cmd/Ctrl+Shift+P` | Open command palette | Another alternative for command palette |
+| `Cmd/Ctrl+L` | Focus sidebar search | Jump to the sidebar search input |
+| `Cmd/Ctrl+R` | Refresh data | Reload the current view or table data |
+| `Cmd/Ctrl+B` | Toggle sidebar | Show or hide the left sidebar |
+| `Cmd/Ctrl+J` | Toggle bottom panel | Show or hide the bottom panel (logs, history) |
+| `Cmd/Ctrl+Shift+B` | Toggle right panel | Show or hide the right panel (details, properties) |
+
+## Tabs
+
+Manage your query and table tabs efficiently.
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+T` | New query tab | Create a new SQL query tab in the active connection |
+| `Cmd/Ctrl+E` | Open SQL query | Alternative shortcut to create a new query tab |
+| `Cmd/Ctrl+W` | Close tab/connection | Close the current tab, or close the connection if no tabs are open |
+| `Cmd/Ctrl+Shift+W` | Close window | Close the current window (when connected to a database) |
+| `Ctrl+Tab` | Next tab | Switch to the next tab |
+| `Ctrl+Shift+Tab` | Previous tab | Switch to the previous tab |
+| `Cmd/Ctrl+]` | Next tab | Alternative shortcut to switch to the next tab (macOS style) |
+| `Cmd/Ctrl+[` | Previous tab | Alternative shortcut to switch to the previous tab (macOS style) |
+| `Cmd/Ctrl+1` through `Cmd/Ctrl+9` | Switch to tab 1-9 | Jump directly to a specific tab by number |
+
+## Query & Editor
+
+Shortcuts for working with SQL queries and the code editor.
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+Enter` | Execute query | Run the entire SQL query in the active editor |
+| `Cmd/Ctrl+Shift+Enter` | Execute selection | Run only the selected SQL statement |
+| `Cmd/Ctrl+S` | Commit changes | Save changes made in table edit mode |
+| `Cmd/Ctrl+Shift+S` | Save SQL as file | Export the current SQL query to a file |
+| `Cmd/Ctrl+Shift+F` | Format SQL | Auto-format the SQL query in the editor |
+| `Shift+Alt+F` | Format SQL (in editor) | Alternative formatting shortcut within Monaco editor |
+| `Cmd/Ctrl+Shift+Backspace` | Discard changes | Revert uncommitted changes in table edit mode |
+
+<Warning>
+  The `Execute query` and `Execute selection` shortcuts only work within the Monaco SQL editor. They won't trigger from other parts of the application.
+</Warning>
+
+## View Menu
+
+These shortcuts are available from the View menu.
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+B` | Toggle sidebar | Show/hide the database schema sidebar |
+| `Cmd/Ctrl+J` | Toggle bottom panel | Show/hide the bottom panel |
+| `Cmd/Ctrl+Shift+B` | Toggle right panel | Show/hide the right panel |
+
+## Window Management
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+W` | Close connection | Close the active database connection or current tab |
+| `Cmd/Ctrl+Shift+W` | Close window | Force close the current window |
+| `Cmd/Ctrl+Shift+N` | New window | Open a new Zequel window |
+
+## Editor Features
+
+The Monaco code editor includes standard text editing shortcuts:
+
+- **Copy/Cut/Paste**: Standard platform shortcuts (`Cmd/Ctrl+C`, `Cmd/Ctrl+X`, `Cmd/Ctrl+V`)
+- **Undo/Redo**: `Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z`
+- **Select All**: `Cmd/Ctrl+A`
+- **Find**: `Cmd/Ctrl+F`
+- **Replace**: `Cmd/Ctrl+H`
+- **Multi-cursor**: `Alt+Click` to add cursors
+
+## Global Shortcuts
+
+Most shortcuts in Zequel are "global," meaning they work even when you're typing in an input field or the SQL editor. This allows for seamless workflow without leaving your current context.
+
+<Accordion title="Platform Differences">
+  **macOS**:
+  - Uses `Cmd` (⌘) as the primary modifier
+  - Shortcuts display with symbols: ⌘ (Cmd), ⌃ (Ctrl), ⌥ (Alt), ⇧ (Shift)
+  - Special keys show as: ⇥ (Tab), ⌫ (Backspace)
+
+  **Windows/Linux**:
+  - Uses `Ctrl` as the primary modifier
+  - Shortcuts display as text: `Ctrl+T`, `Alt+F`, `Shift+Enter`
+  - Key combinations use the `+` separator
+</Accordion>
+
+## Customization
+
+Keyboard shortcuts in Zequel are currently not customizable. If you need different shortcuts, please [submit a feature request](https://github.com/zequel-labs/zequel/issues) on GitHub.
+
+## Tips
+
+<Tip>
+  Press `F1` or `Cmd/Ctrl+Shift+?` at any time to view the complete list of keyboard shortcuts within the app.
+</Tip>
+
+<Tip>
+  The Command Palette (`Cmd/Ctrl+K` or `Cmd/Ctrl+P`) is the fastest way to navigate to tables, views, and saved queries without using the mouse.
+</Tip>

@@ -1,0 +1,698 @@
+---
+title: 'SSL/TLS Configuration'
+description: 'Secure database connections with SSL/TLS encryption and certificate verification'
+---
+
+Zequel supports SSL/TLS encryption for database connections to protect data in transit. This guide covers SSL configuration for all supported databases.
+
+## Overview
+
+SSL/TLS encrypts the connection between Zequel and your database server, preventing eavesdropping and man-in-the-middle attacks.
+
+### Supported Databases
+
+- **PostgreSQL** - Full SSL/TLS support with all verification modes
+- **MySQL/MariaDB** - SSL with CA, client cert, and key support
+- **SQL Server** - TLS with certificate trust options
+- **MongoDB** - TLS with configurable verification
+- **Redis** - TLS/SSL for secure connections
+- **ClickHouse** - HTTPS with SSL options
+
+<Note>
+  SQLite and DuckDB are file-based databases and do not use network connections, so SSL is not applicable.
+</Note>
+
+## SSL Configuration
+
+### SSL Config Interface
+
+```typescript
+interface SSLConfig {
+  enabled?: boolean              // Enable SSL/TLS
+  mode?: SSLMode                 // Verification mode
+  ca?: string                    // CA certificate (PEM format)
+  cert?: string                  // Client certificate (PEM format)
+  key?: string                   // Client private key (PEM format)
+  rejectUnauthorized?: boolean   // Reject invalid certificates
+  minVersion?: string            // Minimum TLS version (e.g., 'TLSv1.2')
+  serverName?: string            // Server name for SNI (PostgreSQL)
+}
+```
+
+### SSL Modes
+
+Zequel supports multiple SSL verification modes:
+
+```typescript
+enum SSLMode {
+  Disable = 'disable',        // No SSL encryption
+  Prefer = 'prefer',          // Try SSL, fallback to unencrypted
+  Require = 'require',        // Require SSL, skip verification
+  VerifyCA = 'verify-ca',     // Verify server certificate against CA
+  VerifyFull = 'verify-full'  // Verify CA and hostname
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Disable">
+    No SSL encryption. Data is transmitted in plaintext.
+    
+    **Use case**: Local development databases
+  </Accordion>
+
+  <Accordion title="Prefer">
+    Attempt SSL connection, but fall back to unencrypted if SSL fails.
+    
+    **Use case**: Development environments where SSL is optional
+    
+    **Note**: If SSL handshake fails, Zequel automatically retries without SSL
+  </Accordion>
+
+  <Accordion title="Require">
+    Require SSL encryption but don't verify the server certificate.
+    
+    **Use case**: Internal networks with self-signed certificates
+    
+    **Warning**: Vulnerable to man-in-the-middle attacks
+  </Accordion>
+
+  <Accordion title="Verify-CA">
+    Require SSL and verify the server certificate is signed by a trusted CA.
+    
+    **Use case**: Production databases with CA-signed certificates
+    
+    **Note**: Does not verify hostname matches certificate
+  </Accordion>
+
+  <Accordion title="Verify-Full">
+    Require SSL, verify CA, and verify hostname matches certificate.
+    
+    **Use case**: Production databases requiring maximum security
+    
+    **Recommended**: Use this mode for production
+  </Accordion>
+</AccordionGroup>
+
+## Database-Specific Configuration
+
+### PostgreSQL
+
+PostgreSQL supports all SSL modes with full certificate verification:
+
+<CodeGroup>
+
+```typescript Basic SSL
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'db.example.com',
+  port: 5432,
+  database: 'production',
+  username: 'app_user',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.Require  // Encrypt but don't verify
+  }
+}
+```
+
+```typescript CA Verification
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'prod.db.example.com',
+  port: 5432,
+  database: 'production',
+  username: 'app_user',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyCA,
+    ca: `-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAKL0UG+mRKm0MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+...
+-----END CERTIFICATE-----`
+  }
+}
+```
+
+```typescript Client Certificate Auth
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'secure-db.example.com',
+  port: 5432,
+  database: 'production',
+  username: 'app_user',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyFull,
+    ca: '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
+    cert: '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
+    key: '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----',
+    serverName: 'db.example.com',  // SNI hostname
+    minVersion: 'TLSv1.2'
+  }
+}
+```
+
+</CodeGroup>
+
+#### PostgreSQL SSL Implementation
+
+```typescript
+private buildSSLOptions(config: ConnectionConfig): any {
+  const sslEnabled = config.ssl || config.sslConfig?.enabled
+  const mode = config.sslConfig?.mode ?? SSLMode.Disable
+
+  if (!sslEnabled || mode === SSLMode.Disable) return undefined
+
+  // For 'prefer' mode: try SSL but don't reject on invalid certs
+  const rejectUnauthorized = mode === SSLMode.Prefer
+    ? false
+    : (mode === SSLMode.VerifyCA || mode === SSLMode.VerifyFull)
+      ? true
+      : (config.sslConfig?.rejectUnauthorized ?? false)
+
+  return {
+    rejectUnauthorized,
+    ...(config.sslConfig?.ca ? { ca: config.sslConfig.ca } : {}),
+    ...(config.sslConfig?.cert ? { cert: config.sslConfig.cert } : {}),
+    ...(config.sslConfig?.key ? { key: config.sslConfig.key } : {}),
+    ...(config.sslConfig?.serverName ? { servername: config.sslConfig.serverName } : {}),
+    ...(config.sslConfig?.minVersion ? { minVersion: config.sslConfig.minVersion } : {})
+  }
+}
+```
+
+### MySQL / MariaDB
+
+MySQL and MariaDB support SSL with CA and client certificate authentication:
+
+<CodeGroup>
+
+```typescript Basic SSL
+const connection = {
+  type: DatabaseType.MySQL,
+  host: 'mysql.example.com',
+  port: 3306,
+  database: 'app_db',
+  username: 'root',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.Require
+  }
+}
+```
+
+```typescript With CA Certificate
+const connection = {
+  type: DatabaseType.MySQL,
+  host: 'db.example.com',
+  port: 3306,
+  database: 'production',
+  username: 'app',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyCA,
+    ca: `-----BEGIN CERTIFICATE-----
+MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF
+...
+-----END CERTIFICATE-----`,
+    rejectUnauthorized: true
+  }
+}
+```
+
+```typescript Client Certificate
+const connection = {
+  type: DatabaseType.MySQL,
+  host: 'secure.db.example.com',
+  port: 3306,
+  database: 'production',
+  username: 'client_user',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyFull,
+    ca: '...',
+    cert: '...',  // Client certificate
+    key: '...'    // Client private key
+  }
+}
+```
+
+</CodeGroup>
+
+#### MySQL SSL Implementation
+
+```typescript
+private buildSSLOptions(config: ConnectionConfig): any {
+  const sslEnabled = config.ssl || config.sslConfig?.enabled
+  const mode = config.sslConfig?.mode ?? SSLMode.Disable
+
+  if (!sslEnabled || mode === SSLMode.Disable) return undefined
+
+  const rejectUnauthorized = mode === SSLMode.Prefer
+    ? false
+    : (mode === SSLMode.VerifyCA || mode === SSLMode.VerifyFull)
+      ? true
+      : (config.sslConfig?.rejectUnauthorized ?? false)
+
+  return {
+    rejectUnauthorized,
+    ...(config.sslConfig?.ca ? { ca: config.sslConfig.ca } : {}),
+    ...(config.sslConfig?.cert ? { cert: config.sslConfig.cert } : {}),
+    ...(config.sslConfig?.key ? { key: config.sslConfig.key } : {})
+  }
+}
+```
+
+### SQL Server
+
+SQL Server uses TLS encryption with an option to trust server certificates:
+
+<CodeGroup>
+
+```typescript Basic TLS
+const connection = {
+  type: DatabaseType.SQLServer,
+  host: 'sqlserver.example.com',
+  port: 1433,
+  database: 'AppDB',
+  username: 'sa',
+  password: 'YourPassword',
+  ssl: true,
+  trustServerCertificate: false  // Verify certificate
+}
+```
+
+```typescript Trust Self-Signed
+const connection = {
+  type: DatabaseType.SQLServer,
+  host: 'localhost',
+  port: 1433,
+  database: 'DevDB',
+  username: 'sa',
+  password: 'DevPassword',
+  ssl: true,
+  trustServerCertificate: true  // Accept self-signed certificates
+}
+```
+
+```typescript With Client Certificate
+const connection = {
+  type: DatabaseType.SQLServer,
+  host: 'secure-sql.example.com',
+  port: 1433,
+  database: 'Production',
+  username: 'app_user',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    ca: '...',
+    cert: '...',
+    key: '...'
+  },
+  trustServerCertificate: false
+}
+```
+
+</CodeGroup>
+
+### MongoDB
+
+MongoDB supports TLS with flexible verification options:
+
+```typescript
+const connection = {
+  type: DatabaseType.MongoDB,
+  host: 'mongo.example.com',
+  port: 27017,
+  database: 'admin',
+  username: 'root',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.Require,
+    rejectUnauthorized: true,  // Verify server certificate
+    ca: '...',                 // Optional CA certificate
+  }
+}
+```
+
+### Redis
+
+Redis supports TLS for encrypted connections:
+
+```typescript
+const connection = {
+  type: DatabaseType.Redis,
+  host: 'redis.example.com',
+  port: 6380,  // TLS port
+  username: 'default',
+  password: 'redis_password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.Require,
+    ca: '...',
+    cert: '...',
+    key: '...'
+  }
+}
+```
+
+### ClickHouse
+
+ClickHouse uses HTTPS for SSL connections:
+
+```typescript
+const connection = {
+  type: DatabaseType.ClickHouse,
+  host: 'clickhouse.example.com',
+  port: 8443,  // HTTPS port
+  database: 'default',
+  username: 'default',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    rejectUnauthorized: true
+  }
+}
+```
+
+## SSL Fallback (Prefer Mode)
+
+When using `SSLMode.Prefer`, Zequel automatically falls back to unencrypted connections if SSL fails:
+
+```typescript
+// PostgreSQL example
+try {
+  this.pool = new Pool(this.buildPoolConfig(config, sslOptions))
+  this.client = await this.pool.connect()
+  logger.info('PostgreSQL client acquired, connected!')
+} catch (error) {
+  logger.error('PostgreSQL connect failed', { error: errMsg, sslMode: mode })
+
+  // For 'prefer' mode: if SSL fails, retry without SSL
+  if (mode === SSLMode.Prefer && sslOptions) {
+    logger.info('PostgreSQL retrying without SSL (prefer mode fallback)')
+    try {
+      this.pool = new Pool(this.buildPoolConfig(config, undefined))
+      this.client = await this.pool.connect()
+      logger.info('PostgreSQL connected without SSL (fallback)')
+      return
+    } catch (fallbackError) {
+      logger.error('PostgreSQL fallback also failed', { error: fbMsg })
+      throw fallbackError
+    }
+  }
+  throw error
+}
+```
+
+<Note>
+  The fallback mechanism is implemented in PostgreSQL and MySQL drivers. MongoDB uses a different approach based on connection string options.
+</Note>
+
+## Certificate Formats
+
+All certificates and keys must be in PEM format:
+
+### CA Certificate
+
+```
+-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAKL0UG+mRKm0MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+...
+-----END CERTIFICATE-----
+```
+
+### Client Certificate
+
+```
+-----BEGIN CERTIFICATE-----
+MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF
+ADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6
+...
+-----END CERTIFICATE-----
+```
+
+### Private Key
+
+```
+-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDHxxx...
+...
+-----END PRIVATE KEY-----
+```
+
+or
+
+```
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAx8cc...
+...
+-----END RSA PRIVATE KEY-----
+```
+
+## Exporting Certificates
+
+### From File System
+
+```bash
+# Read CA certificate
+cat /path/to/ca.pem
+
+# Read client certificate
+cat /path/to/client-cert.pem
+
+# Read client key
+cat /path/to/client-key.pem
+```
+
+### From AWS RDS
+
+```bash
+# Download RDS CA bundle
+curl -o rds-ca-2019-root.pem https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem
+
+# Use in Zequel
+cat rds-ca-2019-root.pem
+```
+
+### From Azure Database
+
+```bash
+# Download Azure CA certificate
+curl -o DigiCertGlobalRootCA.crt.pem https://www.digicert.com/CACerts/DigiCertGlobalRootCA.crt
+
+# Use in Zequel
+cat DigiCertGlobalRootCA.crt.pem
+```
+
+### From Google Cloud SQL
+
+```bash
+# Download server CA certificate from Cloud Console
+# Or use gcloud command
+gcloud sql ssl-certs create my-client-cert --instance=my-instance
+gcloud sql ssl-certs describe my-client-cert --instance=my-instance
+```
+
+## Common SSL Issues
+
+<AccordionGroup>
+  <Accordion title="UNABLE_TO_VERIFY_LEAF_SIGNATURE">
+    **Cause**: Server certificate not signed by trusted CA
+    
+    **Solutions**:
+    - Provide CA certificate in `sslConfig.ca`
+    - Use `SSLMode.Require` to skip verification (not recommended)
+    - Check certificate chain is complete
+  </Accordion>
+
+  <Accordion title="DEPTH_ZERO_SELF_SIGNED_CERT">
+    **Cause**: Server uses self-signed certificate
+    
+    **Solutions**:
+    - Set `rejectUnauthorized: false` (development only)
+    - Use `trustServerCertificate: true` for SQL Server
+    - Import self-signed cert as CA certificate
+  </Accordion>
+
+  <Accordion title="CERT_HAS_EXPIRED">
+    **Cause**: Server certificate expired
+    
+    **Solutions**:
+    - Renew server certificate
+    - Update CA bundle if using cloud provider
+    - Check system clock is correct
+  </Accordion>
+
+  <Accordion title="Hostname/IP doesn't match certificate's altnames">
+    **Cause**: Hostname in connection doesn't match certificate CN or SAN
+    
+    **Solutions**:
+    - Use correct hostname from certificate
+    - Use IP address if certificate includes IP SAN
+    - Set `serverName` for SNI (PostgreSQL)
+    - Use `SSLMode.VerifyCA` instead of `VerifyFull`
+  </Accordion>
+
+  <Accordion title="SSL routines::wrong version number">
+    **Cause**: Server doesn't support SSL or wrong port
+    
+    **Solutions**:
+    - Verify server has SSL enabled
+    - Check port is SSL-enabled port
+    - For MySQL: Use port 3306 (not separate SSL port)
+    - For PostgreSQL: SSL is on same port (5432)
+  </Accordion>
+</AccordionGroup>
+
+## Cloud Provider Examples
+
+### AWS RDS PostgreSQL
+
+```typescript
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: 'mydb.c9akciq32.us-east-1.rds.amazonaws.com',
+  port: 5432,
+  database: 'postgres',
+  username: 'postgres',
+  password: 'mypassword',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyCA,
+    ca: `-----BEGIN CERTIFICATE-----
+MIIEBjCCAu6gAwIBAgIJAMc0ZzaSUK51MA0GCSqGSIb3DQEBCwUAMIGPMQswCQYD
+...
+-----END CERTIFICATE-----`
+  }
+}
+```
+
+### Azure Database for MySQL
+
+```typescript
+const connection = {
+  type: DatabaseType.MySQL,
+  host: 'myserver.mysql.database.azure.com',
+  port: 3306,
+  database: 'mydb',
+  username: 'adminuser@myserver',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyCA,
+    ca: `-----BEGIN CERTIFICATE-----
+MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
+...
+-----END CERTIFICATE-----`
+  }
+}
+```
+
+### Google Cloud SQL
+
+```typescript
+const connection = {
+  type: DatabaseType.PostgreSQL,
+  host: '34.123.45.67',  // Cloud SQL instance IP
+  port: 5432,
+  database: 'production',
+  username: 'postgres',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyFull,
+    ca: '...',    // Server CA cert from Cloud Console
+    cert: '...',  // Client cert from Cloud Console
+    key: '...'    // Client key from Cloud Console
+  }
+}
+```
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Always use SSL in production">
+    Enable SSL for all production database connections to encrypt data in transit
+  </Step>
+
+  <Step title="Use VerifyCA or VerifyFull mode">
+    Always verify server certificates in production to prevent MITM attacks
+  </Step>
+
+  <Step title="Keep CA certificates updated">
+    Cloud providers periodically rotate CA certificates. Keep your CA bundle current
+  </Step>
+
+  <Step title="Use client certificates for high-security environments">
+    Enable mutual TLS authentication with client certificates for sensitive databases
+  </Step>
+
+  <Step title="Rotate certificates regularly">
+    Replace certificates before expiration and rotate regularly per security policy
+  </Step>
+
+  <Step title="Use TLS 1.2 or higher">
+    Set `minVersion: 'TLSv1.2'` to disable older, insecure TLS versions
+  </Step>
+</Steps>
+
+## Testing SSL Connections
+
+Test your SSL configuration before saving:
+
+```typescript
+const result = await connectionManager.testConnection({
+  type: DatabaseType.PostgreSQL,
+  host: 'db.example.com',
+  port: 5432,
+  database: 'production',
+  username: 'app_user',
+  password: 'password',
+  ssl: true,
+  sslConfig: {
+    enabled: true,
+    mode: SSLMode.VerifyFull,
+    ca: '...',
+    cert: '...',
+    key: '...'
+  }
+})
+
+if (result.success) {
+  console.log('SSL connection successful!')
+  console.log('Server version:', result.serverVersion)
+} else {
+  console.error('SSL connection failed:', result.error)
+}
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Connection Overview" icon="plug" href="/connections/overview">
+    Learn about connection management
+  </Card>
+  <Card title="SSH Tunneling" icon="key" href="/connections/ssh-tunneling">
+    Combine SSL with SSH tunnels for defense-in-depth
+  </Card>
+</CardGroup>

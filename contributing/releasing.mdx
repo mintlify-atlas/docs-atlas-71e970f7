@@ -1,0 +1,162 @@
+---
+title: Release Process
+description: How to release a new version of Zequel
+---
+
+Zequel uses an automated release process with GitHub Actions. Releases are triggered by Git tags and can be either stable or beta versions.
+
+## Release Types
+
+### Stable Releases
+
+Stable releases follow semantic versioning (`X.Y.Z`) with auto-increment logic:
+- `1.0.8` → `1.0.9` (patch increment)
+- `1.0.9` → `1.1.0` (minor increment when patch reaches 9)
+- `1.9.9` → `2.0.0` (major increment when both minor and patch reach 9)
+
+### Beta Releases
+
+Beta releases use the format `X.Y.Z-beta.N` where `N` is auto-incremented based on existing tags:
+- First beta: `1.1.0-beta.1`
+- Second beta: `1.1.0-beta.2`
+
+## Prerequisites
+
+<Warning>
+Before creating a release, ensure:
+- All changes are committed (no uncommitted files)
+- You're on the `main` branch
+- All tests pass (`npm run test:unit`)
+- Type checking passes (`npm run typecheck`)
+</Warning>
+
+## Creating a Release
+
+<Steps>
+  <Step title="Run the release script">
+    ```bash
+    npm run release
+    ```
+
+    The script will prompt you to choose between stable and beta release types.
+  </Step>
+
+  <Step title="Select release type">
+    ```
+    Current version: 1.2.2
+
+    Release type:
+      1) Stable  (1.2.3)
+      2) Beta    (1.2.3-beta.1)
+
+    Choose [1/2]:
+    ```
+
+    Enter `1` for stable or `2` for beta.
+  </Step>
+
+  <Step title="Confirm the release">
+    Review the version details and type `y` to confirm:
+
+    ```
+    Current version: 1.2.2
+    New version:     1.2.3
+    Channel:         stable
+
+    Continue? (y/N)
+    ```
+  </Step>
+
+  <Step title="Automatic workflow">
+    The script will:
+    1. Validate the version format
+    2. Update `package.json`
+    3. Commit the version bump
+    4. Create a Git tag
+    5. Push to `origin/main` and push the tag
+  </Step>
+</Steps>
+
+## Manual Release (Advanced)
+
+You can specify a custom version directly:
+
+```bash
+npm run release 1.3.0-rc.1
+```
+
+The version must match the format `X.Y.Z` or `X.Y.Z-prerelease`.
+
+## GitHub Actions Workflow
+
+Once the tag is pushed, GitHub Actions automatically:
+
+1. **Creates a draft release** based on the tag name
+2. **Builds platform-specific binaries** in parallel:
+   - **macOS**: Apple Silicon (arm64) and Intel (x64)
+     - Code signing with Apple Developer certificate
+     - Notarization via Apple's notary service
+     - Stapling notarization ticket to app bundle
+   - **Windows**: x64 and arm64 (NSIS installer)
+   - **Linux**: x64 and arm64 (AppImage)
+3. **Uploads artifacts** to the draft release
+4. **Publishes the release** once all builds complete
+
+<Note>
+Beta releases (versions with `-` suffix) are marked as pre-release and do not update the "latest" release tag.
+</Note>
+
+## Build Configuration
+
+The build process is configured in `package.json` under the `build` key:
+
+```json
+{
+  "build": {
+    "appId": "dev.zequel.app",
+    "productName": "Zequel",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "target": ["zip"]
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Development"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "zequel-labs",
+      "repo": "zequel"
+    }
+  }
+}
+```
+
+## Artifact Naming
+
+Releases generate the following artifacts:
+
+- **macOS Silicon**: `zequel-apple-silicon.zip`
+- **macOS Intel**: `zequel-apple-intel.zip`
+- **Windows x64**: `zequel-window-x64.exe`
+- **Windows arm64**: `zequel-window-arm64.exe`
+- **Linux x64**: `zequel-linux-x64.AppImage`
+- **Linux arm64**: `zequel-linux-arm64.AppImage`
+
+## Auto-Updates
+
+Zequel includes `electron-updater` for automatic updates. The GitHub publish configuration in `package.json` ensures update manifests (`latest-mac.yml`, `latest-linux.yml`, etc.) are generated and uploaded with each release.
+
+## Monitoring Releases
+
+After pushing the tag, monitor the build progress at:
+
+```
+https://github.com/zequel-labs/zequel/actions
+```
+
+The complete release workflow typically takes 15-20 minutes, with macOS notarization being the longest step (up to 30 minutes).
