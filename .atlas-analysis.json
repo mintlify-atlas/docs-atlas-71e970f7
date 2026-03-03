@@ -1,0 +1,128 @@
+{
+  "projectType": "saas",
+  "projectName": "Zequel",
+  "projectDescription": "Modern, open-source database management GUI for PostgreSQL, MySQL, MariaDB, SQLite, DuckDB, ClickHouse, SQL Server, MongoDB, and Redis",
+  "theme": "aspen",
+  "primaryColor": "#2B7FC1",
+  "lightColor": "#4DA3E8",
+  "darkColor": "#5B4FBA",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart",
+              "interface-overview"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/query-editor",
+              "features/data-grid",
+              "features/schema-browser",
+              "features/er-diagrams",
+              "features/import-export",
+              "features/backup-restore",
+              "features/monitoring"
+            ]
+          },
+          {
+            "group": "Connections",
+            "pages": [
+              "connections/overview",
+              "connections/ssh-tunneling",
+              "connections/ssl-tls"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/keyboard-shortcuts",
+              "advanced/command-palette",
+              "advanced/settings",
+              "advanced/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Database Guides",
+        "groups": [
+          {
+            "group": "Supported Databases",
+            "pages": [
+              "databases/overview",
+              "databases/postgresql",
+              "databases/mysql",
+              "databases/mariadb",
+              "databases/sqlite",
+              "databases/duckdb",
+              "databases/clickhouse",
+              "databases/sqlserver",
+              "databases/mongodb",
+              "databases/redis"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Contributing",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "contributing/overview",
+              "contributing/development-setup",
+              "contributing/project-structure",
+              "contributing/architecture",
+              "contributing/testing",
+              "contributing/database-adapters"
+            ]
+          },
+          {
+            "group": "Release",
+            "pages": [
+              "contributing/releasing",
+              "contributing/app-icons"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Query editor with Monaco-based syntax highlighting and autocompletion",
+    "Virtual-scrolled data grid with inline cell editing",
+    "Interactive schema browser with tree view",
+    "Auto-generated ER diagrams for visualizing table relationships",
+    "Import/export in CSV, JSON, SQL, and Excel formats",
+    "Native backup and restore using pg_dump, mysqldump, etc.",
+    "SSH tunneling and SSL/TLS encryption support",
+    "Process monitoring for active database connections",
+    "Command palette for quick action access",
+    "Cross-platform support (macOS, Windows, Linux)"
+  ],
+  "publicApiSurface": [
+    "PostgreSQL connection (versions 12+)",
+    "MySQL connection (versions 5.7+)",
+    "MariaDB connection (versions 10.4+)",
+    "SQLite connection (bundled)",
+    "DuckDB connection (bundled)",
+    "ClickHouse connection (versions 22.8+)",
+    "SQL Server connection (versions 2012+)",
+    "MongoDB connection (versions 4.2+)",
+    "Redis connection (versions 6.0+)",
+    "SQL query execution",
+    "Schema introspection API",
+    "Data grid operations (CRUD)",
+    "Import/Export operations",
+    "Backup/Restore operations",
+    "SSH tunnel establishment"
+  ]
+}
